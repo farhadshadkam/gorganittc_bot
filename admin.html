@@ -102,9 +102,11 @@
       <nav class="nav">
         <a data-page="dashboard" class="active" onclick="showPage('dashboard')">📊 <span class="txt">داشبورد</span></a>
         <a data-page="regs" onclick="showPage('regs')">📋 <span class="txt">ثبت‌نام‌ها</span></a>
+        <a data-page="requests" onclick="showPage('requests')">📥 <span class="txt">درخواست دوره</span></a>
         <a data-page="courses" onclick="showPage('courses')">🎓 <span class="txt">بانک دوره‌ها</span></a>
         <a data-page="broadcast" onclick="showPage('broadcast')">✉️ <span class="txt">پیام بله</span></a>
         <a data-page="reports" onclick="showPage('reports')">📈 <span class="txt">گزارش‌ها</span></a>
+        <a data-page="catreport" onclick="showPage('catreport')">🗂 <span class="txt">گزارش گروه‌ها</span></a>
         <a data-page="settings" onclick="showPage('settings')">⚙️ <span class="txt">تنظیمات</span></a>
       </nav>
       <div class="foot">
@@ -156,6 +158,21 @@
         <div class="table-wrap"><table class="tbl" id="regsTbl"></table></div>
       </section>
 
+      <!-- درخواست دوره -->
+      <section class="page" id="page-requests">
+        <div class="page-head"><h2>📥 درخواست‌های دوره جدید</h2>
+          <button class="btn btn-sm btn-ghost" onclick="loadRequests()">🔄</button>
+        </div>
+        <div id="reqsAlert" class="alert alert-err"></div>
+        <p style="color:var(--muted); font-size:13.5px; margin-bottom:12px">درخواست‌هایی که کاربران برای برگزاری دوره‌های جدید ثبت کرده‌اند. با «بررسی»، وضعیت اقدام و گروه‌بندی دوره را مشخص می‌کنید.</p>
+        <div class="toolbar">
+          <input class="input" id="qReqSearch" placeholder="🔍 جستجو: عنوان/نام/کدملی..." onkeydown="if(event.key==='Enter')loadRequests()">
+          <select class="input" id="fReqStatus" onchange="loadRequests()"><option value="">همه وضعیت‌ها</option></select>
+          <button class="btn btn-sm" onclick="loadRequests()">اعمال</button>
+        </div>
+        <div class="table-wrap"><table class="tbl" id="reqTbl"></table></div>
+      </section>
+
       <!-- بانک دوره‌ها -->
       <section class="page" id="page-courses">
         <div class="page-head"><h2>🎓 بانک دوره‌های مرکز</h2>
@@ -195,6 +212,16 @@
         <div class="table-wrap" style="margin-bottom:28px"><table class="tbl" id="bcHistTbl"></table></div>
         <h3 style="margin-bottom:12px; color:var(--primary-dark)">گزارش عملیات ادمین‌ها</h3>
         <div class="table-wrap"><table class="tbl" id="logsTbl"></table></div>
+      </section>
+
+      <!-- گزارش گروه‌ها -->
+      <section class="page" id="page-catreport">
+        <div class="page-head"><h2>🗂 گزارش گروه‌بندی دوره‌ها</h2>
+          <button class="btn btn-sm btn-ghost" onclick="loadCategoryReport()">🔄</button>
+        </div>
+        <div id="catAlert" class="alert alert-err"></div>
+        <p style="color:var(--muted); font-size:13.5px; margin-bottom:14px">گروه‌ها با یکسان‌سازی املا (فاصله/نیم‌فاصله، ی و ك عربی) یکی می‌شوند تا دو گروه هم‌نام با املای متفاوت نداشته باشید. هنگام تایپ گروه در «بانک دوره‌ها» و «بررسی درخواست»، گروه‌های موجود پیشنهاد می‌شوند.</p>
+        <div class="table-wrap"><table class="tbl" id="catTbl"></table></div>
       </section>
 
       <!-- تنظیمات -->
@@ -243,7 +270,7 @@
         <input type="hidden" id="c_id">
         <div class="field"><label>عنوان دوره <span class="req">*</span></label><input class="input" id="c_title"></div>
         <div class="form-grid">
-          <div class="field"><label>دسته/رشته</label><input class="input" id="c_category" placeholder="مثال: خانگی، فنی، رایانه‌ای"></div>
+          <div class="field"><label>گروه/دسته (از لیست انتخاب یا جدید)</label><input class="input" id="c_category" list="catList" placeholder="مثال: خانگی، فنی، رایانه‌ای"></div>
           <div class="field"><label>ظرفیت <span class="req">*</span></label><input class="input" id="c_capacity" type="number" min="1" max="1000"></div>
           <div class="field"><label>تاریخ شروع</label><input class="input" id="c_start_date" placeholder="۱۴۰۴/۰۹/۰۵"></div>
           <div class="field"><label>زمان‌بندی</label><input class="input" id="c_schedule" placeholder="شنبه و دوشنبه ۹ تا ۱۱"></div>
@@ -274,6 +301,29 @@
     </div>
   </div>
 
+  <!-- مودال بررسی درخواست دوره -->
+  <div class="modal-mask" id="reqModal">
+    <div class="modal">
+      <div class="modal-head"><h3>بررسی درخواست دوره</h3><button class="modal-close" onclick="closeModal('reqModal')">×</button></div>
+      <div class="modal-body">
+        <div id="reqReviewAlert" class="alert alert-err"></div>
+        <input type="hidden" id="rq_id">
+        <div class="field"><label>عنوان پیشنهادی</label><input class="input" id="rq_title" readonly style="background:#f8fafc"></div>
+        <div id="rq_who" style="font-size:13.5px; color:var(--muted); margin-bottom:12px"></div>
+        <div class="form-grid">
+          <div class="field"><label>گروه/دسته دوره <span class="req">*</span></label><input class="input" id="rq_category" list="catList" placeholder="از لیست انتخاب کنید یا گروه جدید بنویسید"></div>
+          <div class="field"><label>وضعیت اقدام</label><select class="input" id="rq_status"></select></div>
+        </div>
+        <div class="field"><label>یادداشت کارشناس</label><textarea class="input" id="rq_note" rows="2" placeholder="اختیاری — مثلاً نام مربی پیشنهادی، زمان احتمالی برگزاری..."></textarea></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" onclick="closeModal('reqModal')">انصراف</button>
+        <button class="btn btn-ghost" onclick="makeCourseFromReq()">🎓 ایجاد دوره با این عنوان</button>
+        <button class="btn" onclick="saveReqReview()">💾 ذخیره بررسی</button>
+      </div>
+    </div>
+  </div>
+
   <!-- مودال ادمین -->
   <div class="modal-mask" id="adminModal">
     <div class="modal" style="max-width:460px">
@@ -292,6 +342,7 @@
     </div>
   </div>
 
+  <datalist id="catList"></datalist>
   <script src="assets/js/config.js"></script>
   <script src="assets/js/admin.js"></script>
 </body>
