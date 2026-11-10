@@ -10,6 +10,13 @@
   var STATUS_CLASS = { 'منتظر': 'b-wait', 'ثبت‌نام شده': 'b-reg', 'انصراف داده': 'b-withdraw', 'جواب نداده': 'b-noans', 'سایر': 'b-other' };
   var STATUS_ICON = { 'منتظر': '⏳', 'ثبت‌نام شده': '✅', 'انصراف داده': '🚫', 'جواب نداده': '📵', 'سایر': '📌' };
   var REGS = [], COURSES = [], DASH = null, SELECTED = {}, DETAIL_REG = null, BC_IDS = null;
+  var REQ_STATUSES = [ // دقیقاً هم‌خوان با REQ_STATUSES در Utils.gs بک‌اند
+    'فعلاً بررسی نشده',
+    'بررسی شد؛ در اسرع وقت برگزار می‌شود',
+    'بررسی شد؛ به‌دلیل نبود مربی فعلاً قابل برگزاری نیست و در برنامه‌ریزی قرار می‌گیرد',
+    'به‌دلیل ضوابط سازمان و مرکز، متأسفانه قابل برگزاری نیست'
+  ];
+  var REQS = [], REQ_DETAIL = null;
 
   function $(id) { return document.getElementById(id); }
   function esc(s) {
@@ -17,6 +24,7 @@
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
   function fa(n) { return String(n === 0 ? '۰' : n || '').replace(/\d/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'[d]; }); }
+  function fixMobile(s) { var m = String(s || '').replace(/\D/g, ''); if (m.length === 10 && m.charAt(0) === '9') m = '0' + m; return m; }
   function badge(st) { return '<span class="badge ' + (STATUS_CLASS[st] || 'b-noans') + '">' + (STATUS_ICON[st] || '') + ' ' + esc(st) + '</span>'; }
   function showErr(id, msg) { var a = $(id); a.textContent = '⚠️ ' + msg; a.className = 'alert alert-err show'; }
   function showOk(id, msg) { var a = $(id); a.textContent = '✅ ' + msg; a.className = 'alert alert-ok show'; setTimeout(function () { a.className = 'alert alert-ok'; }, 4000); }
@@ -86,6 +94,17 @@
       case 'getUsers': return ok({ rows: demoRegs().map(function (r) { return { id: r.reg_id, first_name: r.first_name, last_name: r.last_name, national_code: r.national_code, mobile: r.mobile, gender: r.gender, city: r.city, education: r.education, employment: r.employment, source: r.source, created_at: r.created_at, reg_count: 1, chat_id: r.chat_id }; }) });
       case 'getSettings': return ok({ settings: { center_name: 'مرکز آموزش مهارتی (نمونه)', center_phone: '۰۲۱-۱۲۳۴۵۶۷۸', center_address: 'تهران، خیابان نمونه', bot_username: 'MyCenterBot', admin_group_chat_id: '', bot_token_set: true } });
       case 'saveSettings': return ok({});
+      case 'getRequests': return ok({ rows: [
+        { id: 'Q1001', title: 'تعمیرات موبایل', category: 'فنی', first_name: 'علی', last_name: 'رضایی', national_code: '0012345679', mobile: '09193334455', chat_id: '', source: 'web', status: REQ_STATUSES[0], admin_note: '', handled_by: '', created_at: '1404/08/18 10:20', updated_at: '1404/08/18 10:20' },
+        { id: 'Q1002', title: 'گلدوزی و سوزن‌دوزی', category: 'خانگی', first_name: 'زهرا', last_name: 'محمدی', national_code: '0020867891', mobile: '09121112233', chat_id: '123456789', source: 'bot', status: REQ_STATUSES[2], admin_note: 'در انتظار معرفی مربی', handled_by: 'کارشناس ثبت‌نام', created_at: '1404/08/17 14:00', updated_at: '1404/08/18 09:00' }
+      ], statuses: REQ_STATUSES });
+      case 'setRequest': return ok({});
+      case 'getCategories': return ok({ categories: ['خانگی', 'رایانه‌ای', 'فنی', 'هنری'] });
+      case 'categoryReport': return ok({ rows: [
+        { key: 'خانگی', label: 'خانگی', courses: 2, capacity: 32, regs: 12, soon: 1, closed: 0, requests: 1 },
+        { key: 'رایانه‌ای', label: 'رایانه‌ای', courses: 1, capacity: 15, regs: 11, soon: 0, closed: 0, requests: 0 },
+        { key: 'فنی', label: 'فنی', courses: 1, capacity: 10, regs: 0, soon: 1, closed: 0, requests: 1 }
+      ] });
       case 'botStatus': return ok({ configured: true, bot: { username: 'MyCenterBot', first_name: 'ربات ثبت‌نام' } });
       case 'listAdmins': return ok({ rows: [{ id: 'A10', name: 'مدیر', role: 'مدیر', created_at: '1404/08/01' }, { id: 'A11', name: 'کارشناس ثبت‌نام', role: 'اپراتور', created_at: '1404/08/01' }] });
       case 'saveAdmin': return ok({});
@@ -142,7 +161,19 @@
     loadRegs();
     if ($('page-settings').classList.contains('show')) loadSettings();
     if ($('page-reports').classList.contains('show')) loadReports();
+    fillReqStatusSelects();
   };
+
+  function fillReqStatusSelects() {
+    ['fReqStatus'].forEach(function (id) {
+      var sel = $(id), val = sel.value;
+      if (sel.options.length > 1) return;
+      REQ_STATUSES.forEach(function (s) {
+        var o = document.createElement('option'); o.value = s; o.textContent = s; sel.appendChild(o);
+      });
+      sel.value = val;
+    });
+  }
 
   function fillStatusSelects() {
     ['fStatus', 'bulkStatus', 'bcStatus'].forEach(function (id) {
@@ -174,6 +205,8 @@
     if (name === 'reports') loadReports();
     if (name === 'settings') loadSettings();
     if (name === 'courses') renderCourses();
+    if (name === 'requests') loadRequests();
+    if (name === 'catreport') loadCategoryReport();
   };
 
   /* ================= داشبورد ================= */
@@ -207,7 +240,7 @@
 
     $('recentTbl').innerHTML = '<thead><tr><th>کد</th><th>نام</th><th>موبایل</th><th>دوره</th><th>وضعیت</th><th>منبع</th><th>تاریخ</th></tr></thead><tbody>' +
       (DASH.recent || []).map(function (r) {
-        return '<tr><td>' + esc(r.reg_code) + '</td><td>' + esc(r.first_name + ' ' + r.last_name) + '</td><td>' + esc(r.mobile) + '</td><td>' + esc(r.course_title) + '</td><td>' + badge(r.status) + '</td><td>' + srcBadge(r.source) + '</td><td>' + esc(r.created_at) + '</td></tr>';
+        return '<tr><td>' + esc(r.reg_code) + '</td><td>' + esc(r.first_name + ' ' + r.last_name) + '</td><td dir="ltr">' + esc(fixMobile(r.mobile)) + '</td><td>' + esc(r.course_title) + '</td><td>' + badge(r.status) + '</td><td>' + srcBadge(r.source) + '</td><td>' + esc(r.created_at) + '</td></tr>';
       }).join('') + '</tbody>';
   }
 
@@ -241,7 +274,7 @@
         '<td><input type="checkbox" ' + (SELECTED[r.reg_id] ? 'checked' : '') + ' onchange="toggleSel(\'' + r.reg_id + '\', this.checked)" style="cursor:pointer; width:16px; height:16px"></td>' +
         '<td style="cursor:pointer; font-weight:700; color:var(--primary)" onclick="openDetail(\'' + r.reg_id + '\')">' + esc(r.reg_code) + '</td>' +
         '<td>' + esc(r.first_name + ' ' + r.last_name) + '<br><small style="color:var(--muted)">' + esc(r.city) + '</small></td>' +
-        '<td>' + esc(r.national_code) + '<br><small style="color:var(--muted)">' + esc(r.mobile) + '</small></td>' +
+        '<td>' + esc(r.national_code) + '<br><small style="color:var(--muted)" dir="ltr">' + esc(fixMobile(r.mobile)) + '</small></td>' +
         '<td>' + esc(r.course_title) + '</td>' +
         '<td><select class="input" style="padding:4px 8px; font-size:12.5px; min-width:120px" onchange="quickStatus(\'' + r.reg_id + '\', this.value)">' + opts + '</select></td>' +
         '<td>' + srcBadge(r.source) + '</td>' +
@@ -292,7 +325,7 @@
       '<div style="margin-bottom:14px">' + badge(r.status) + ' ' + srcBadge(r.source) + ' <span style="font-size:12px; color:var(--muted)">| ثبت: ' + esc(r.created_at) + '</span></div>' +
       row('کد رهگیری', esc(r.reg_code)) + row('جنسیت', esc(r.gender)) +
       row('نام و نام‌خانوادگی', esc(r.first_name + ' ' + r.last_name)) + row('کد ملی', esc(r.national_code)) +
-      row('موبایل', esc(r.mobile)) + row('شهر', esc(r.city)) +
+      row('موبایل', esc(fixMobile(r.mobile))) + row('شهر', esc(r.city)) +
       row('محله/خیابان', esc(r.address)) + row('کد پستی', esc(r.postal_code)) +
       row('تاریخ تولد', esc(r.birth_date)) + row('مدرک تحصیلی', esc(r.education)) +
       row('رشته تحصیلی', esc(r.field)) + row('وضعیت اشتغال', esc(r.employment)) +
@@ -361,6 +394,7 @@
     $('c_status').value = c ? c.status : 'در حال ثبت‌نام';
     $('c_description').value = c ? (c.description || '') : '';
     $('courseAlert').className = 'alert alert-err';
+    refreshCatList(); // پیشنهاد گروه‌های موجود هنگام تایپ
     $('courseModal').classList.add('show');
   };
 
@@ -384,6 +418,117 @@
       api('getCourses').then(function (x) { if (x.ok) { COURSES = x.rows; fillCourseSelects(); renderCourses(); } });
     });
   };
+
+  /* ================= درخواست‌های دوره ================= */
+  function reqBadge(st) {
+    var cls, ic;
+    if (st === 'فعلاً بررسی نشده') { cls = 'b-wait'; ic = '⏳'; }
+    else if (st.indexOf('اسرع وقت') > -1) { cls = 'b-reg'; ic = '✅'; }
+    else if (st.indexOf('مربی') > -1) { cls = 'b-soon'; ic = '📅'; }
+    else { cls = 'b-withdraw'; ic = '🚫'; }
+    return '<span class="badge ' + cls + '">' + ic + ' ' + esc(st) + '</span>';
+  }
+
+  window.loadRequests = function () {
+    api('getRequests', { status: $('fReqStatus').value, q: $('qReqSearch').value }).then(function (r) {
+      if (!r.ok) { showErr('reqsAlert', r.error); return; }
+      REQS = r.rows;
+      renderRequests();
+    });
+  };
+
+  function renderRequests() {
+    $('reqTbl').innerHTML = '<thead><tr><th>کد</th><th>عنوان پیشنهادی</th><th>گروه</th><th>درخواست‌دهنده</th><th>وضعیت اقدام</th><th>منبع</th><th>تاریخ ثبت</th><th>عملیات</th></tr></thead><tbody>' +
+      (REQS.length ? REQS.map(function (r) {
+        return '<tr><td style="font-weight:700">' + esc(r.id) + '</td>' +
+          '<td style="font-weight:700; color:var(--primary-dark)">' + esc(r.title) + '</td>' +
+          '<td>' + esc(r.category || '—') + '</td>' +
+          '<td>' + esc(r.first_name + ' ' + r.last_name) + '<br><small style="color:var(--muted)">' + esc(r.national_code) + ' | <span dir="ltr">' + esc(fixMobile(r.mobile)) + '</span></small></td>' +
+          '<td>' + reqBadge(r.status) + '</td>' +
+          '<td>' + srcBadge(r.source) + '</td>' +
+          '<td style="white-space:nowrap; font-size:12px; color:var(--muted)">' + esc(r.created_at) + '</td>' +
+          '<td><button class="btn btn-sm" onclick="openReqReview(\'' + esc(r.id) + '\')">بررسی</button></td></tr>';
+      }).join('') : '<tr><td colspan="8" style="text-align:center; color:var(--muted); padding:30px">درخواستی ثبت نشده است</td></tr>') + '</tbody>';
+  }
+
+  /** پیشنهاد گروه‌های موجود در فیلد تایپ گروه (datalist) */
+  function refreshCatList() {
+    api('getCategories').then(function (r) {
+      if (!r.ok) return;
+      $('catList').innerHTML = (r.categories || []).map(function (c) {
+        return '<option value="' + esc(c) + '">';
+      }).join('');
+    });
+  }
+
+  window.openReqReview = function (id) {
+    var r = REQS.filter(function (x) { return x.id === id; })[0];
+    if (!r) return;
+    REQ_DETAIL = r;
+    $('rq_id').value = r.id;
+    $('rq_title').value = r.title;
+    $('rq_who').innerHTML = '👤 <b>' + esc(r.first_name + ' ' + r.last_name) + '</b> | کد ملی: ' + esc(r.national_code) +
+      ' | موبایل: <span dir="ltr">' + esc(fixMobile(r.mobile)) + '</span> | ' +
+      (r.source === 'bot' ? '🤖 بات' : '🌐 وب‌سایت') +
+      (r.handled_by ? ' | بررسی قبلی: ' + esc(r.handled_by) : '');
+    $('rq_category').value = r.category || '';
+    $('rq_status').innerHTML = REQ_STATUSES.map(function (s) {
+      return '<option' + (s === r.status ? ' selected' : '') + '>' + esc(s) + '</option>';
+    }).join('');
+    $('rq_note').value = r.admin_note || '';
+    $('reqReviewAlert').className = 'alert alert-err';
+    refreshCatList();
+    $('reqModal').classList.add('show');
+  };
+
+  window.saveReqReview = function () {
+    if (!REQ_DETAIL) return;
+    var category = $('rq_category').value.trim();
+    if (category.length < 2) { showErr('reqReviewAlert', 'گروه/دسته دوره را وارد کنید (از لیست یا گروه جدید).'); return; }
+    api('setRequest', {
+      req_id: REQ_DETAIL.id,
+      status: $('rq_status').value,
+      category: category,
+      note: $('rq_note').value
+    }).then(function (r) {
+      if (!r.ok) { showErr('reqReviewAlert', r.error); return; }
+      closeModal('reqModal');
+      loadRequests();
+    });
+  };
+
+  /** ساخت سریع دوره از روی درخواست — فرم دوره با عنوان و گروه پیش‌پر می‌شود */
+  window.makeCourseFromReq = function () {
+    if (!REQ_DETAIL) return;
+    var category = $('rq_category').value.trim();
+    if (category.length < 2) { showErr('reqReviewAlert', 'اول گروه/دسته دوره را وارد کنید، بعد دوره را بسازید.'); return; }
+    closeModal('reqModal');
+    openCourseModal();
+    $('c_title').value = REQ_DETAIL.title;
+    $('c_category').value = category;
+    $('c_capacity').value = '';
+    $('c_start_date').value = '';
+    $('c_schedule').value = '';
+    $('c_description').value = 'بر اساس درخواست شماره ' + REQ_DETAIL.id;
+    $('c_status').value = 'به‌زودی';
+  };
+
+  /* ================= گزارش گروه‌ها ================= */
+  function loadCategoryReport() {
+    api('categoryReport').then(function (r) {
+      if (!r.ok) { showErr('catAlert', r.error); return; }
+      $('catTbl').innerHTML = '<thead><tr><th>گروه</th><th>مجموع دوره</th><th>در حال ثبت‌نام</th><th>به‌زودی</th><th>بسته</th><th>ظرفیت کل</th><th>ثبت‌نام فعال</th><th>درخواست دوره</th></tr></thead><tbody>' +
+        (r.rows.length ? r.rows.map(function (g) {
+          return '<tr><td style="font-weight:700">' + esc(g.label) + '</td>' +
+            '<td>' + fa(g.courses) + '</td>' +
+            '<td><b style="color:var(--primary-dark)">' + fa(g.courses - g.soon - g.closed) + '</b></td>' +
+            '<td>' + fa(g.soon) + '</td><td>' + fa(g.closed) + '</td>' +
+            '<td>' + fa(g.capacity) + '</td>' +
+            '<td><b style="color:var(--primary-dark)">' + fa(g.regs) + '</b></td>' +
+            '<td>' + fa(g.requests) + '</td></tr>';
+        }).join('') : '<tr><td colspan="8" style="text-align:center; color:var(--muted); padding:30px">گروهی ثبت نشده است</td></tr>') + '</tbody>';
+    });
+  }
 
   /* ================= پیام بله ================= */
   window.gotoBroadcastWithSelection = function () {
@@ -527,8 +672,8 @@
   /* شروع */
   if (DEMO) $('demoBanner').classList.add('show');
   if (TOKEN) {
-    // آزمون اعتبار توکن
-    api('login', {}).then(function (r) {
+    // آزمون اعتبار توکن ذخیره‌شده با اکشن مخصوص whoami
+    api('whoami').then(function (r) {
       if (r.ok) { ADMIN_NAME = r.name || ADMIN_NAME; enterApp(); } else logout();
     }).catch(function () {});
   }

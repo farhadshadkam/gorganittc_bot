@@ -59,23 +59,33 @@
       return Promise.resolve({
         ok: true,
         center: { name: 'مرکز آموزش مهارتی (نمونه)', phone: '۰۲۱-۱۲۳۴۵۶۷۸', address: 'تهران، خیابان نمونه', bot_username: '' },
-        courses: DEMO_COURSES
+        courses: DEMO_COURSES,
+        titles: ['آموزش خیاطی مقدماتی', 'مهارت‌های ICDL (رایانه)', 'آشپزی و شیرینی‌پزی', 'تعمیرات موبایل', 'گلدوزی']
       });
     if (action === 'webRegister')
       return new Promise(function (res) {
         setTimeout(function () { res({ ok: true, reg_code: 'R-' + (10000 + Math.floor(Math.random() * 9000)) }); }, 600);
       });
+    if (action === 'saveRequest')
+      return new Promise(function (res) {
+        setTimeout(function () { res({ ok: true, req_id: 'Q1001' }); }, 600);
+      });
+    if (action === 'myRequests')
+      return Promise.resolve({ ok: true, rows: [
+        { id: 'Q1001', title: 'تعمیرات موبایل', category: 'فنی', status: 'بررسی شد؛ در اسرع وقت برگزار می‌شود', created_at: '1404/08/18 10:00', updated_at: '1404/08/19 09:30' }
+      ] });
     return Promise.resolve({ ok: false, error: 'حالت نمایشی' });
   }
 
   /* ================= بارگذاری اولیه ================= */
-  var CENTER = null, COURSES = [];
+  var CENTER = null, COURSES = [], TITLES = [];
 
   function loadPublic() {
     if (DEMO) $('demoBanner').classList.add('show');
     api('publicInfo').then(function (r) {
       if (!r.ok) return;
       CENTER = r.center; COURSES = r.courses;
+      TITLES = r.titles || [];
       $('centerName').textContent = r.center.name;
       $('footerCenter').textContent = r.center.name;
       $('footerAddress').textContent = 'آدرس: ' + (r.center.address || '—');
@@ -291,9 +301,228 @@
   };
   window.prevStep = function () { if (STEP > 0) { grabStep(); STEP--; renderStep(); } };
 
+  /* ================= فرم درخواست دوره جدید =================
+   * ۴ مرحله: ۱) عنوان دوره (با پیشنهاد هوشمند) ۲) نام ۳) کد ملی و موبایل ۴) تأیید
+   * وضعیت اولیه درخواست «فعلاً بررسی نشده» است و بعداً از پنل ادمین بررسی می‌شود.
+   */
+  var RSTEP_LABELS = ['عنوان دوره', 'نام', 'هویتی', 'تأیید'];
+  var RDATA = { title: '', full_name: '', national_code: '', mobile: '' };
+  var RSTEP = 0;
+
+  window.openReqModal = function () {
+    RDATA = { title: '', full_name: '', national_code: '', mobile: '' };
+    RSTEP = 0;
+    $('reqSuccess').style.display = 'none';
+    $('reqForm').style.display = 'block';
+    $('reqAlert').className = 'alert alert-err';
+    renderReqStep();
+    $('reqModal').classList.add('show');
+  };
+  window.closeReqModal = function () { $('reqModal').classList.remove('show'); };
+  window.resetReqWizard = function () {
+    RDATA.title = '';
+    RSTEP = 0;
+    $('reqSuccess').style.display = 'none';
+    $('reqForm').style.display = 'block';
+    $('reqAlert').className = 'alert alert-err';
+    renderReqStep();
+  };
+
+  function showReqErr(msg) {
+    var a = $('reqAlert');
+    a.textContent = '⚠️ ' + msg;
+    a.className = 'alert alert-err show';
+    a.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  var RSTEPS = [
+    function () {
+      return '<h4 style="margin-bottom:14px">۱) عنوان دوره موردنظر</h4>' +
+        '<div class="field"><label>دوره‌ای که دوست دارید برگزار شود را بنویسید <span class="req">*</span></label>' +
+        '<input class="input" id="r_title" placeholder="مثال: تعمیرات موبایل، خیاطی لباس مجلسی..." value="' + esc(RDATA.title) + '" oninput="reqTitleInput(this.value)">' +
+        '<div class="hint">اگر مشابه عنوان تایپی شما قبلاً ثبت شده باشد، همین‌جا پیشنهاد می‌شود.</div>' +
+        '<div id="reqSug"></div></div>';
+    },
+    function () {
+      return '<h4 style="margin-bottom:14px">۲) نام و نام‌خانوادگی</h4>' +
+        '<div class="field"><label>نام و نام‌خانوادگی <span class="req">*</span></label>' +
+        '<input class="input" id="r_full_name" placeholder="مثال: علی رضایی" value="' + esc(RDATA.full_name) + '"></div>';
+    },
+    function () {
+      return '<h4 style="margin-bottom:14px">۳) اطلاعات تماس</h4>' +
+        '<div class="form-grid">' +
+        '<div class="field"><label>کد ملی (۱۰ رقم) <span class="req">*</span></label><input class="input" id="r_nc" inputmode="numeric" value="' + esc(RDATA.national_code) + '"></div>' +
+        '<div class="field"><label>شماره موبایل <span class="req">*</span></label><input class="input" id="r_mobile" inputmode="tel" placeholder="09xxxxxxxxx" value="' + esc(RDATA.mobile) + '"></div>' +
+        '</div>' +
+        '<div class="hint">کد ملی برای پیگیری درخواست‌هایتان استفاده می‌شود.</div>';
+    },
+    function () {
+      function row(k, v) { return '<div><span>' + k + '</span><span>' + (v || '—') + '</span></div>'; }
+      return '<h4 style="margin-bottom:14px">۴) بازبینی و ثبت</h4>' +
+        '<div class="review-box">' +
+        row('عنوان دوره', esc(RDATA.title)) +
+        row('نام و نام‌خانوادگی', esc(RDATA.full_name)) +
+        row('کد ملی', esc(RDATA.national_code)) + row('موبایل', esc(RDATA.mobile)) +
+        '</div>' +
+        '<p style="font-size:13px; color:var(--muted); margin-top:10px">درخواست با وضعیت «فعلاً بررسی نشده» ثبت می‌شود؛ پس از بررسی کارشناسان، وضعیت را از «پیگیری درخواست‌ها» یا دکمه «📩 درخواست‌های من» ربات بله ببینید.</p>';
+    }
+  ];
+
+  function renderReqStep() {
+    $('reqStepper').innerHTML = RSTEP_LABELS.map(function (s, i) {
+      return '<div class="st' + (i === RSTEP ? ' active' : (i < RSTEP ? ' done' : '')) + '">' + (i < RSTEP ? '✓ ' : '') + s + '</div>';
+    }).join('');
+    $('reqStepContent').innerHTML = RSTEPS[RSTEP]();
+    $('reqPrevBtn').style.visibility = RSTEP === 0 ? 'hidden' : 'visible';
+    $('reqNextBtn').textContent = RSTEP === 3 ? '📌 ثبت درخواست' : 'مرحله بعد ⬅️';
+    $('reqAlert').className = 'alert alert-err';
+  }
+
+  function grabReqStep() {
+    var el;
+    el = $('r_title'); if (el) RDATA.title = el.value.trim();
+    el = $('r_full_name'); if (el) RDATA.full_name = el.value.trim();
+    el = $('r_nc'); if (el) RDATA.national_code = el.value.trim();
+    el = $('r_mobile'); if (el) RDATA.mobile = el.value.trim();
+  }
+
+  function validateReqStep() {
+    switch (RSTEP) {
+      case 0:
+        if (RDATA.title.length < 3) return 'عنوان دوره را کامل‌تر بنویسید (حداقل ۳ حرف).';
+        break;
+      case 1: {
+        var p = RDATA.full_name.split(/\s+/);
+        if (p.length < 2 || p[0].length < 2 || p.slice(1).join(' ').length < 2)
+          return 'نام و نام‌خانوادگی را با هم وارد کنید (مثال: علی رضایی).';
+        break;
+      }
+      case 2:
+        if (!validNationalCode(RDATA.national_code)) return 'کد ملی ۱۰ رقمی معتبر وارد کنید.';
+        if (!validMobile(RDATA.mobile)) return 'شماره موبایل با ۰۹ شروع شود و ۱۱ رقم باشد.';
+        break;
+    }
+    return null;
+  }
+
+  /** پیشنهاد هوشمند عنوان — با تایپ، از بانک دوره‌ها و درخواست‌های قبلی */
+  window.reqTitleInput = function (v) {
+    RDATA.title = v.trim();
+    var box = $('reqSug');
+    if (!box) return;
+    var q = String(v || '').replace(/\u200C/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+    if (q.length < 2) { box.innerHTML = ''; return; }
+    var hits = [];
+    for (var i = 0; i < TITLES.length && hits.length < 6; i++) {
+      var t = String(TITLES[i]).replace(/\u200C/g, ' ').toLowerCase();
+      if (t.indexOf(q) > -1) hits.push(TITLES[i]);
+    }
+    if (!hits.length) { box.innerHTML = ''; return; }
+    box.innerHTML = '<div class="sug-list">' + hits.map(function (t) {
+      return '<div class="sug-item" onclick="pickReqTitle(this)" data-v="' + esc(t) + '">🔍 ' + esc(t) + '</div>';
+    }).join('') + '</div>';
+  };
+  window.pickReqTitle = function (el) {
+    var v = el.getAttribute('data-v') || '';
+    if (!v) return;
+    RDATA.title = v;
+    var inp = $('r_title');
+    if (inp) inp.value = v;
+    $('reqSug').innerHTML = '';
+  };
+
+  window.nextReqStep = function () {
+    grabReqStep();
+    var err = validateReqStep();
+    if (err) { showReqErr(err); return; }
+    if (RSTEP < 3) { RSTEP++; renderReqStep(); return; }
+    submitReq();
+  };
+  window.prevReqStep = function () { if (RSTEP > 0) { grabReqStep(); RSTEP--; renderReqStep(); } };
+
+  function submitReq() {
+    var p = RDATA.full_name.trim().split(/\s+/);
+    $('reqNextBtn').disabled = true;
+    $('reqNextBtn').textContent = '⏳ در حال ثبت...';
+    api('saveRequest', { data: {
+      title: RDATA.title,
+      first_name: p[0] || '', last_name: p.slice(1).join(' ') || '',
+      national_code: RDATA.national_code, mobile: RDATA.mobile
+    } }).then(function (r) {
+      $('reqNextBtn').disabled = false;
+      $('reqNextBtn').textContent = '📌 ثبت درخواست';
+      if (!r.ok) { showReqErr(r.error || 'خطا در ثبت درخواست؛ دوباره تلاش کنید.'); return; }
+      $('reqForm').style.display = 'none';
+      $('reqSuccess').style.display = 'block';
+      $('reqSuccessCode').textContent = r.req_id;
+      loadPublic(); // عنوان جدید وارد فهرست پیشنهادها شود
+    }).catch(function () {
+      $('reqNextBtn').disabled = false;
+      $('reqNextBtn').textContent = '📌 ثبت درخواست';
+      showReqErr('ارتباط با سرور برقرار نشد؛ اتصال اینترنت را بررسی کنید.');
+    });
+  }
+
+  /* ================= پیگیری درخواست‌ها ================= */
+  function reqBadgeCls(st) {
+    if (st === 'فعلاً بررسی نشده') return 'b-wait';
+    if (st.indexOf('اسرع وقت') > -1) return 'b-reg';
+    if (st.indexOf('مربی') > -1) return 'b-soon';
+    return 'b-withdraw';
+  }
+  window.openFollowModal = function () {
+    $('followResult').innerHTML = '';
+    $('followAlert').className = 'alert alert-err';
+    $('followNc').value = '';
+    $('followModal').classList.add('show');
+  };
+  window.closeFollowModal = function () { $('followModal').classList.remove('show'); };
+  window.lookupReq = function () {
+    var nc = ($('followNc').value || '').trim();
+    $('followAlert').className = 'alert alert-err';
+    if (!validNationalCode(nc)) {
+      var a = $('followAlert');
+      a.textContent = '⚠️ کد ملی ۱۰ رقمی معتبر را وارد کنید.';
+      a.className = 'alert alert-err show';
+      return;
+    }
+    $('followResult').innerHTML = '<p style="color:var(--muted)">⏳ در حال جستجو...</p>';
+    api('myRequests', { national_code: nc }).then(function (r) {
+      if (!r.ok) {
+        $('followResult').innerHTML = '';
+        var a = $('followAlert');
+        a.textContent = '⚠️ ' + (r.error || 'خطا در جستجو');
+        a.className = 'alert alert-err show';
+        return;
+      }
+      if (!r.rows.length) {
+        $('followResult').innerHTML = '<div class="follow-card" style="text-align:center; color:var(--muted)">درخواستی با این کد ملی ثبت نشده است.</div>';
+        return;
+      }
+      $('followResult').innerHTML = '<div class="follow-card"><h4 style="margin-bottom:8px">درخواست‌های شما:</h4>' +
+        r.rows.map(function (x) {
+          return '<div class="follow-item"><b>' + esc(x.title) + '</b>' +
+            (x.category ? ' <span class="badge b-open">' + esc(x.category) + '</span>' : '') +
+            '<br><span class="badge ' + reqBadgeCls(x.status) + '">' + esc(x.status) + '</span>' +
+            '<br><small style="color:var(--muted)">ثبت: ' + esc(x.created_at) +
+            (x.updated_at && x.updated_at !== x.created_at ? ' | آخرین بررسی: ' + esc(x.updated_at) : '') +
+            ' | کد پیگیری: ' + esc(x.id) + '</small></div>';
+        }).join('') + '</div>';
+    }).catch(function () {
+      $('followResult').innerHTML = '';
+      var a = $('followAlert');
+      a.textContent = '⚠️ ارتباط با سرور برقرار نشد.';
+      a.className = 'alert alert-err show';
+    });
+  };
+
   // بستن مودال با کلیک بیرون یا Escape
   $('regModal').addEventListener('click', function (e) { if (e.target === this) closeRegModal(); });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeRegModal(); });
+  $('reqModal').addEventListener('click', function (e) { if (e.target === this) closeReqModal(); });
+  $('followModal').addEventListener('click', function (e) { if (e.target === this) closeFollowModal(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { closeRegModal(); closeReqModal(); closeFollowModal(); }
+  });
 
   loadPublic();
 })();
