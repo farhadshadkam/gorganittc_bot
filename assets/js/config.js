@@ -5,5 +5,5 @@
  * ⚠️ امن: در این فایل فقط آدرس عمومی وب‌اپ قرار می‌گیرد؛ توکن بات هرگز اینجا نیست.
  */
 window.APP_CONFIG = {
-  API_URL: ""
+  API_URL: "https://script.google.com/macros/s/AKfycbxdpRKbZpR1oua8AvE2rW9bw3LJ3uu8PWjspLY1Jlg31UN0XFBBtVl8xQwALjAmsQUS/exec"
 };
