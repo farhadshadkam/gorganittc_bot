@@ -82,6 +82,20 @@ h1, h2, h3, h4 { font-weight: 800; line-height: 1.6; }
 .b-web { background: #dbeafe; color: #1e40af; }
 .b-bot { background: var(--primary-light); color: var(--primary-dark); }
 
+/* ---------- پیشنهاد هوشمند عنوان (فرم درخواست دوره) ---------- */
+.sug-list { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.sug-item {
+  cursor: pointer; padding: 8px 14px; border: 1px dashed var(--primary);
+  border-radius: 10px; background: var(--primary-light); color: var(--primary-dark);
+  font-size: 13.5px; font-weight: 600; transition: all .15s; text-align: right; user-select: none;
+}
+.sug-item:hover { background: var(--primary); color: #fff; }
+
+/* ---------- کارت پیگیری درخواست‌ها ---------- */
+.follow-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-top: 10px; }
+.follow-item { padding: 10px 4px; border-bottom: 1px dashed var(--border); line-height: 2; }
+.follow-item:last-child { border-bottom: none; }
+
 /* ---------- مودال ---------- */
 .modal-mask {
   position: fixed; inset: 0; background: rgba(15, 23, 42, .55); z-index: 100;
