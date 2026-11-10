@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>پنل مدیریت — سامانه پیش‌ثبت‌نام مهارتی</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    body { background: var(--bg); }
+    .demo-banner { background: #fef9c3; color: #854d0e; text-align: center; padding: 8px 14px; font-size: 13px; display: none; }
+    .demo-banner.show { display: block; }
+
+    /* ---------- ورود ---------- */
+    .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #134e4a, #0f766e 60%, #14b8a6); padding: 20px; }
+    .login-card { background: #fff; border-radius: 20px; box-shadow: 0 24px 70px rgba(0,0,0,.3); padding: 40px 36px; width: 100%; max-width: 400px; }
+    .login-card .logo { width: 64px; height: 64px; border-radius: 18px; background: linear-gradient(135deg, var(--primary), #14b8a6); display: flex; align-items: center; justify-content: center; font-size: 30px; margin: 0 auto 16px; }
+    .login-card h1 { text-align: center; font-size: 19px; color: var(--primary-dark); margin-bottom: 4px; }
+    .login-card .sub { text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+
+    /* ---------- چیدمان پنل ---------- */
+    .layout { display: none; min-height: 100vh; }
+    .layout.show { display: flex; }
+    .sidebar {
+      width: 230px; background: #134e4a; color: #a7f3d0; display: flex; flex-direction: column;
+      position: sticky; top: 0; height: 100vh; flex-shrink: 0;
+    }
+    .sidebar .brand { display: flex; gap: 10px; align-items: center; padding: 20px 18px; color: #fff; font-weight: 800; border-bottom: 1px solid rgba(255,255,255,.08); }
+    .sidebar .brand .logo { width: 36px; height: 36px; background: rgba(255,255,255,.12); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .nav { flex: 1; padding: 14px 10px; display: flex; flex-direction: column; gap: 4px; }
+    .nav a { display: flex; gap: 10px; align-items: center; padding: 11px 14px; border-radius: 10px; color: #a7f3d0; font-size: 14.5px; font-weight: 600; cursor: pointer; }
+    .nav a:hover { background: rgba(255,255,255,.07); color: #fff; }
+    .nav a.active { background: var(--primary); color: #fff; }
+    .sidebar .foot { padding: 16px; border-top: 1px solid rgba(255,255,255,.08); font-size: 13px; }
+    .sidebar .foot .admin-name { color: #fff; font-weight: 700; margin-bottom: 10px; display: block; }
+    .sidebar .foot button { width: 100%; background: rgba(255,255,255,.1); color: #fecaca; border: none; padding: 8px; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 13px; }
+    .sidebar .foot button:hover { background: rgba(255,255,255,.2); }
+
+    main { flex: 1; padding: 26px 30px; max-width: 1200px; }
+    .page { display: none; }
+    .page.show { display: block; }
+    .page-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+    .page-head h2 { font-size: 21px; color: var(--primary-dark); }
+
+    /* ---------- داشبورد ---------- */
+    .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 24px; }
+    .kpi { background: #fff; border-radius: 14px; box-shadow: var(--shadow); padding: 18px; text-align: center; cursor: pointer; transition: transform .15s; border: 2px solid transparent; }
+    .kpi:hover { transform: translateY(-3px); border-color: var(--primary-light); }
+    .kpi .num { font-size: 30px; font-weight: 800; color: var(--primary-dark); }
+    .kpi .lbl { font-size: 13px; color: var(--muted); font-weight: 600; }
+    .kpi.k-wait .num { color: #b45309; } .kpi.k-reg .num { color: #047857; }
+    .kpi.k-withdraw .num { color: #be123c; } .kpi.k-noans .num { color: #475569; }
+    .kpi.k-other .num { color: #6d28d9; }
+    .course-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+    .cstat { background: #fff; border-radius: 14px; box-shadow: var(--shadow); padding: 18px; }
+    .cstat h4 { font-size: 15px; margin-bottom: 2px; }
+    .cstat .sub { font-size: 12px; color: var(--muted); margin-bottom: 10px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .mini-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+    .mini { text-align: center; padding: 8px 2px; border-radius: 10px; cursor: pointer; background: #f8fafc; transition: all .15s; }
+    .mini:hover { background: var(--primary-light); }
+    .mini b { display: block; font-size: 17px; }
+    .mini span { font-size: 10.5px; color: var(--muted); }
+    .cap-bar { height: 7px; background: #e2e8f0; border-radius: 999px; overflow: hidden; margin: 10px 0 4px; }
+    .cap-bar > div { height: 100%; background: linear-gradient(90deg, var(--primary), #14b8a6); }
+
+    /* ---------- نوار فیلتر/ابزار ---------- */
+    .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; background: #fff; padding: 14px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 16px; }
+    .toolbar .input, .toolbar select.input { width: auto; min-width: 130px; padding: 8px 12px; font-size: 13.5px; }
+    .bulkbar { display: none; gap: 10px; align-items: center; flex-wrap: wrap; background: #fffbeb; border: 1px solid #fde68a; padding: 12px 16px; border-radius: 12px; margin-bottom: 16px; font-size: 13.5px; }
+    .bulkbar.show { display: flex; }
+
+    /* ---------- ریسپانسیو ---------- */
+    @media (max-width: 900px) {
+      .sidebar { width: 64px; }
+      .sidebar .brand span:not(.logo), .sidebar .nav a span.txt, .sidebar .foot .admin-name { display: none; }
+      .nav a { justify-content: center; }
+      main { padding: 18px 14px; }
+      .mini-row { grid-template-columns: repeat(3, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-banner" id="demoBanner">🧪 <b>حالت نمایشی:</b> آدرس وب‌اپ گوگل‌شیت هنوز در <code>assets/js/config.js</code> تنظیم نشده؛ داده‌های نمونه نمایش داده می‌شود.</div>
+
+  <!-- ================= ورود ================= -->
+  <div class="login-wrap" id="loginView">
+    <div class="login-card">
+      <div class="logo">🎓</div>
+      <h1>پنل مدیریت پیش‌ثبت‌نام</h1>
+      <div class="sub">سامانه آموزش‌های مهارتی</div>
+      <div id="loginAlert" class="alert alert-err"></div>
+      <div class="field"><label>نام کاربری (نام ادمین)</label><input class="input" id="loginName" placeholder="مثال: مدیر"></div>
+      <div class="field"><label>کد کاربری</label><input class="input" id="loginCode" type="password" inputmode="numeric" placeholder="مثال: 1404"></div>
+      <button class="btn btn-lg" style="width:100%" id="loginBtn" onclick="doLogin()">ورود به پنل</button>
+    </div>
+  </div>
+
+  <!-- ================= پنل ================= -->
+  <div class="layout" id="appView">
+    <aside class="sidebar">
+      <div class="brand"><span class="logo">🎓</span><span>پنل مدیریت</span></div>
+      <nav class="nav">
+        <a data-page="dashboard" class="active" onclick="showPage('dashboard')">📊 <span class="txt">داشبورد</span></a>
+        <a data-page="regs" onclick="showPage('regs')">📋 <span class="txt">ثبت‌نام‌ها</span></a>
+        <a data-page="courses" onclick="showPage('courses')">🎓 <span class="txt">بانک دوره‌ها</span></a>
+        <a data-page="broadcast" onclick="showPage('broadcast')">✉️ <span class="txt">پیام بله</span></a>
+        <a data-page="reports" onclick="showPage('reports')">📈 <span class="txt">گزارش‌ها</span></a>
+        <a data-page="settings" onclick="showPage('settings')">⚙️ <span class="txt">تنظیمات</span></a>
+      </nav>
+      <div class="foot">
+        <span class="admin-name" id="adminName">—</span>
+        <button onclick="logout()">🚪 خروج</button>
+      </div>
+    </aside>
+
+    <main>
+      <!-- داشبورد -->
+      <section class="page show" id="page-dashboard">
+        <div class="page-head"><h2>📊 داشبورد ثبت‌نام</h2><button class="btn btn-sm btn-ghost" onclick="boot()">🔄 بروزرسانی</button></div>
+        <div id="dashAlert" class="alert alert-err"></div>
+        <div class="kpi-row" id="kpiRow"></div>
+        <h3 style="margin-bottom:12px; color:var(--primary-dark)">به تفکیک دوره‌ها <small style="color:var(--muted); font-weight:400">(روی هر عدد کلیک کنید)</small></h3>
+        <div class="course-stats" id="courseStats"></div>
+        <h3 style="margin:26px 0 12px; color:var(--primary-dark)">آخرین ثبت‌نام‌ها</h3>
+        <div class="table-wrap"><table class="tbl" id="recentTbl"></table></div>
+      </section>
+
+      <!-- ثبت‌نام‌ها -->
+      <section class="page" id="page-regs">
+        <div class="page-head"><h2>📋 فهرست ثبت‌نام‌ها</h2>
+          <div style="display:flex; gap:8px">
+            <button class="btn btn-sm btn-ghost" onclick="exportCsv()">⬇️ خروجی CSV</button>
+            <button class="btn btn-sm btn-ghost" onclick="loadRegs()">🔄</button>
+          </div>
+        </div>
+        <div id="regsAlert" class="alert alert-err"></div>
+        <div class="toolbar">
+          <input class="input" id="qSearch" placeholder="🔍 جستجو: نام/کدملی/موبایل..." onkeydown="if(event.key==='Enter')loadRegs()">
+          <select class="input" id="fCourse" onchange="loadRegs()"><option value="">همه دوره‌ها</option></select>
+          <select class="input" id="fStatus" onchange="loadRegs()">
+            <option value="">همه وضعیت‌ها</option>
+          </select>
+          <select class="input" id="fSource" onchange="loadRegs()">
+            <option value="">همه منابع</option>
+            <option value="bot">بات بله</option>
+            <option value="web">وب‌سایت</option>
+          </select>
+          <button class="btn btn-sm" onclick="loadRegs()">اعمال</button>
+        </div>
+        <div class="bulkbar" id="bulkbar">
+          <b id="selCount">۰ مورد انتخاب شده</b>
+          <select class="input" id="bulkStatus" style="min-width:150px"></select>
+          <button class="btn btn-sm" onclick="applyBulkStatus()">تغییر وضعیت</button>
+          <button class="btn btn-sm btn-accent" onclick="gotoBroadcastWithSelection()">✉️ ارسال پیام بله</button>
+        </div>
+        <div class="table-wrap"><table class="tbl" id="regsTbl"></table></div>
+      </section>
+
+      <!-- بانک دوره‌ها -->
+      <section class="page" id="page-courses">
+        <div class="page-head"><h2>🎓 بانک دوره‌های مرکز</h2>
+          <button class="btn btn-sm" onclick="openCourseModal()">➕ افزودن دوره</button>
+        </div>
+        <div id="coursesAlert" class="alert alert-err"></div>
+        <div class="table-wrap"><table class="tbl" id="coursesTbl"></table></div>
+      </section>
+
+      <!-- پیام بله -->
+      <section class="page" id="page-broadcast">
+        <div class="page-head"><h2>✉️ ارسال پیام بله به ثبت‌نامی‌ها</h2></div>
+        <div id="bcAlertOk" class="alert alert-ok"></div>
+        <div id="bcAlert" class="alert alert-err"></div>
+        <div class="card" style="max-width:760px">
+          <div class="field"><label>مخاطبان</label>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center">
+              <select class="input" id="bcCourse" onchange="updateBcCount()"><option value="">همه دوره‌ها</option></select>
+              <select class="input" id="bcStatus" onchange="updateBcCount()"><option value="">همه وضعیت‌ها</option></select>
+              <span class="badge b-bot" id="bcCount">۰ مخاطب</span>
+            </div>
+            <div class="hint" id="bcSelHint" style="display:none"></div>
+          </div>
+          <div class="field"><label>متن پیام <span class="req">*</span></label>
+            <textarea class="input" id="bcText" rows="6" placeholder="متن پیام شما...&#10;مثال: با سلام، دوره خیاطی از تاریخ ۱۴۰۴/۰۹/۰۵ آغاز می‌شود. لطفاً برای تکمیل ثبت‌نام تا پایان هفته تماس بگیرید."></textarea>
+            <div class="hint">در ابتدای هر پیام، نام مخاطب به‌صورت خودکار اضافه می‌شود. کاربرانی که ثبت‌نام وبی بدون حساب بله دارند، قابل ارسال نیستند و در گزارش ناموفق می‌آیند.</div>
+          </div>
+          <button class="btn btn-lg" id="bcSend" onclick="sendBroadcast()">📤 ارسال پیام</button>
+        </div>
+        <div id="bcResult" style="max-width:760px; margin-top:16px"></div>
+      </section>
+
+      <!-- گزارش‌ها -->
+      <section class="page" id="page-reports">
+        <div class="page-head"><h2>📈 گزارش‌ها</h2></div>
+        <h3 style="margin-bottom:12px; color:var(--primary-dark)">تاریخچه ارسال پیام‌های بله</h3>
+        <div class="table-wrap" style="margin-bottom:28px"><table class="tbl" id="bcHistTbl"></table></div>
+        <h3 style="margin-bottom:12px; color:var(--primary-dark)">گزارش عملیات ادمین‌ها</h3>
+        <div class="table-wrap"><table class="tbl" id="logsTbl"></table></div>
+      </section>
+
+      <!-- تنظیمات -->
+      <section class="page" id="page-settings">
+        <div class="page-head"><h2>⚙️ تنظیمات</h2></div>
+        <div style="display:grid; gap:18px; max-width:820px">
+          <div class="card">
+            <h3 style="margin-bottom:14px">🏛 اطلاعات مرکز (نمایش در لندینگ)</h3>
+            <div id="setAlert" class="alert alert-ok"></div>
+            <div class="form-grid">
+              <div class="field"><label>نام مرکز</label><input class="input" id="s_center_name"></div>
+              <div class="field"><label>تلفن</label><input class="input" id="s_center_phone"></div>
+              <div class="field"><label>آدرس</label><input class="input" id="s_center_address"></div>
+              <div class="field"><label>نام کاربری بات بله (بدون @)</label><input class="input" id="s_bot_username" placeholder="MyCenterBot"></div>
+              <div class="field"><label>چت ادمین در بله (شناسه گروه/فرد)</label><input class="input" id="s_admin_group_chat_id" placeholder="اختیاری — برای اطلاع‌رسانی ثبت‌نام‌ها"></div>
+            </div>
+            <button class="btn" onclick="saveCenterInfo()">💾 ذخیره اطلاعات مرکز</button>
+          </div>
+
+          <div class="card">
+            <h3 style="margin-bottom:14px">🤖 اتصال بات بله</h3>
+            <div id="botStatusBox" style="margin-bottom:14px"></div>
+            <div class="field"><label>توکن بات (از BotFather بله)</label>
+              <input class="input" id="s_bot_token" type="password" placeholder="123456789:AbC...">
+              <div class="hint" id="tokenHint">توکن فقط در گوگل‌شیت ذخیره می‌شود و هرگز در کد سایت قرار نمی‌گیرد. با ذخیره، Webhook به‌صورت خودکار تنظیم می‌شود.</div>
+            </div>
+            <button class="btn" onclick="saveBotToken()">💾 ذخیره توکن و اتصال بات</button>
+          </div>
+
+          <div class="card">
+            <h3 style="margin-bottom:14px">👥 ادمین‌های پنل</h3>
+            <div class="table-wrap" style="margin-bottom:14px"><table class="tbl" id="adminsTbl"></table></div>
+            <button class="btn btn-sm" onclick="openAdminModal()">➕ افزودن ادمین</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- مودال دوره -->
+  <div class="modal-mask" id="courseModal">
+    <div class="modal">
+      <div class="modal-head"><h3 id="courseModalTitle">افزودن دوره</h3><button class="modal-close" onclick="closeModal('courseModal')">×</button></div>
+      <div class="modal-body">
+        <div id="courseAlert" class="alert alert-err"></div>
+        <input type="hidden" id="c_id">
+        <div class="field"><label>عنوان دوره <span class="req">*</span></label><input class="input" id="c_title"></div>
+        <div class="form-grid">
+          <div class="field"><label>دسته/رشته</label><input class="input" id="c_category" placeholder="مثال: خانگی، فنی، رایانه‌ای"></div>
+          <div class="field"><label>ظرفیت <span class="req">*</span></label><input class="input" id="c_capacity" type="number" min="1" max="1000"></div>
+          <div class="field"><label>تاریخ شروع</label><input class="input" id="c_start_date" placeholder="۱۴۰۴/۰۹/۰۵"></div>
+          <div class="field"><label>زمان‌بندی</label><input class="input" id="c_schedule" placeholder="شنبه و دوشنبه ۹ تا ۱۱"></div>
+        </div>
+        <div class="field"><label>وضعیت</label>
+          <select class="input" id="c_status">
+            <option>در حال ثبت‌نام</option><option>به‌زودی</option><option>بسته</option>
+          </select>
+        </div>
+        <div class="field"><label>توضیحات</label><textarea class="input" id="c_description" rows="3"></textarea></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" onclick="closeModal('courseModal')">انصراف</button>
+        <button class="btn" onclick="saveCourse()">💾 ذخیره دوره</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- مودال جزئیات ثبت‌نام -->
+  <div class="modal-mask" id="detailModal">
+    <div class="modal">
+      <div class="modal-head"><h3>جزئیات پیش‌ثبت‌نام</h3><button class="modal-close" onclick="closeModal('detailModal')">×</button></div>
+      <div class="modal-body" id="detailBody"></div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" onclick="closeModal('detailModal')">بستن</button>
+        <button class="btn" id="detailSaveBtn" onclick="saveDetail()">💾 ذخیره تغییرات</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- مودال ادمین -->
+  <div class="modal-mask" id="adminModal">
+    <div class="modal" style="max-width:460px">
+      <div class="modal-head"><h3 id="adminModalTitle">افزودن ادمین</h3><button class="modal-close" onclick="closeModal('adminModal')">×</button></div>
+      <div class="modal-body">
+        <div id="adminAlert" class="alert alert-err"></div>
+        <input type="hidden" id="a_id">
+        <div class="field"><label>نام ادمین <span class="req">*</span></label><input class="input" id="a_name"></div>
+        <div class="field"><label>کد کاربری <span class="req">*</span></label><input class="input" id="a_code" inputmode="numeric" placeholder="عدد ۳ تا ۸ رقمی"></div>
+        <div class="field"><label>نقش</label><select class="input" id="a_role"><option>مدیر</option><option>اپراتور</option></select></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" onclick="closeModal('adminModal')">انصراف</button>
+        <button class="btn" onclick="saveAdmin()">💾 ذخیره</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/admin.js"></script>
+</body>
+</html>

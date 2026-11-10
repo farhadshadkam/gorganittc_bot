@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>پیش‌ثبت‌نام دوره‌های آموزش مهارتی</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    /* ---------- هدر ---------- */
+    .topbar { background: #fff; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 50; }
+    .topbar-in { max-width: 1100px; margin: 0 auto; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 16.5px; color: var(--primary-dark); }
+    .brand .logo { width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, var(--primary), #14b8a6); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 20px; }
+    .topbar .btns { display: flex; gap: 8px; }
+
+    /* ---------- هیرو ---------- */
+    .hero { background: linear-gradient(135deg, #134e4a 0%, #0f766e 55%, #14b8a6 100%); color: #fff; padding: 64px 20px 90px; text-align: center; }
+    .hero h1 { font-size: 30px; margin-bottom: 12px; }
+    .hero p { max-width: 640px; margin: 0 auto 26px; color: #ccfbf1; font-size: 16px; }
+    .hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+    /* ---------- دوره‌ها ---------- */
+    .section { max-width: 1100px; margin: 0 auto; padding: 40px 20px; }
+    .section-title { text-align: center; margin-bottom: 8px; font-size: 24px; color: var(--primary-dark); }
+    .section-sub { text-align: center; color: var(--muted); margin-bottom: 30px; }
+    .courses-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+    .course-card { background: #fff; border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px; display: flex; flex-direction: column; gap: 10px; transition: transform .18s; border: 1px solid transparent; }
+    .course-card:hover { transform: translateY(-4px); border-color: var(--primary-light); }
+    .course-card .chips { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .course-card h3 { font-size: 17.5px; color: var(--text); }
+    .course-card .meta { font-size: 13px; color: var(--muted); display: flex; flex-direction: column; gap: 3px; }
+    .course-card .desc { font-size: 13.5px; color: #475569; border-right: 3px solid var(--primary-light); padding-right: 10px; }
+    .cap-bar { height: 8px; background: #e2e8f0; border-radius: 999px; overflow: hidden; }
+    .cap-bar > div { height: 100%; background: linear-gradient(90deg, var(--primary), #14b8a6); border-radius: 999px; transition: width .4s; }
+    .cap-text { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; }
+    .course-card .btn { margin-top: auto; }
+
+    /* ---------- مراحل ---------- */
+    .steps-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; }
+    .step-box { text-align: center; background: #fff; border-radius: var(--radius); box-shadow: var(--shadow); padding: 26px 18px; }
+    .step-box .ic { font-size: 34px; margin-bottom: 10px; }
+    .step-box h4 { font-size: 15.5px; margin-bottom: 6px; }
+    .step-box p { font-size: 13px; color: var(--muted); }
+
+    /* ---------- بات ---------- */
+    .bot-band { background: linear-gradient(135deg, #fff7ed, #fef3c7); border: 1px solid #fde68a; border-radius: var(--radius); padding: 26px; display: flex; align-items: center; gap: 20px; justify-content: space-between; flex-wrap: wrap; margin-top: 40px; }
+    .bot-band h3 { color: #92400e; }
+    .bot-band p { color: #a16207; font-size: 14px; }
+
+    footer { background: #134e4a; color: #ccfbf1; margin-top: 60px; padding: 36px 20px; text-align: center; font-size: 14px; }
+    footer .fin { max-width: 1100px; margin: 0 auto; display: flex; justify-content: space-around; flex-wrap: wrap; gap: 20px; text-align: right; }
+    footer h4 { color: #fff; margin-bottom: 8px; font-size: 15px; }
+
+    .demo-banner { background: #fef9c3; color: #854d0e; text-align: center; padding: 8px 14px; font-size: 13px; display: none; }
+    .demo-banner.show { display: block; }
+
+    /* ---------- مودال ثبت‌نام ---------- */
+    #regModal .modal { max-width: 700px; }
+    .review-box { background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; font-size: 14px; }
+    .review-box div { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed #e2e8f0; }
+    .review-box div:last-child { border-bottom: none; }
+    .review-box span:first-child { color: var(--muted); }
+    .review-box span:last-child { font-weight: 700; }
+    .course-pick { display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto; }
+    .course-pick label {
+      display: flex; justify-content: space-between; align-items: center; gap: 10px; cursor: pointer;
+      border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 14px; transition: all .15s;
+    }
+    .course-pick label.active { border-color: var(--primary); background: var(--primary-light); }
+    .success-view { text-align: center; padding: 30px 10px; }
+    .success-view .big { font-size: 52px; }
+    .success-view .code { font-size: 30px; font-weight: 800; color: var(--primary-dark); background: var(--primary-light); display: inline-block; padding: 8px 30px; border-radius: 12px; margin: 14px 0; letter-spacing: 2px; }
+  </style>
+</head>
+<body>
+  <div class="demo-banner" id="demoBanner">🧪 <b>حالت نمایشی:</b> آدرس وب‌اپ گوگل‌شیت هنوز در <code>assets/js/config.js</code> تنظیم نشده؛ داده‌های نمونه نمایش داده می‌شود.</div>
+
+  <header class="topbar">
+    <div class="topbar-in">
+      <div class="brand"><span class="logo">🎓</span><span id="centerName">مرکز آموزش مهارتی</span></div>
+      <div class="btns">
+        <a class="btn btn-sm btn-ghost" href="#courses">دوره‌ها</a>
+        <a class="btn btn-sm" id="botLink" href="#" target="_blank" style="display:none">بات بله 🤖</a>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <h1>پیش‌ثبت‌نام دوره‌های آموزش مهارتی</h1>
+    <p>دوره موردنظر خود را انتخاب کنید، اطلاعات را در چند دقیقه تکمیل کنید و کد رهگیری بگیرید. همکاری ما پس از بررسی با شما تماس می‌گیرد.</p>
+    <div class="hero-actions">
+      <a href="#courses" class="btn btn-accent btn-lg">مشاهده دوره‌های در حال ثبت‌نام ⬇️</a>
+      <a href="#" id="botLink2" class="btn btn-lg" style="background:#fff; color:var(--primary-dark); display:none" target="_blank">🤖 ثبت‌نام از طریق بات بله</a>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="steps-row">
+      <div class="step-box"><div class="ic">1️⃣</div><h4>انتخاب دوره</h4><p>از میان بانک دوره‌های مرکز، دوره مناسب خود را انتخاب کنید.</p></div>
+      <div class="step-box"><div class="ic">2️⃣</div><h4>تکمیل فرم</h4><p>مشخصات هویتی، تماس و تحصیلی را در ۴ گام وارد کنید.</p></div>
+      <div class="step-box"><div class="ic">3️⃣</div><h4>دریافت کد رهگیری</h4><p>پیش‌ثبت‌نام شما در سیستم ثبت و وضعیت آن قابل پیگیری است.</p></div>
+      <div class="step-box"><div class="ic">4️⃣</div><h4>تماس کارشناس</h4><p>برای تکمیل ثبت‌نام نهایی، کارشناسان مرکز با شما تماس می‌گیرند.</p></div>
+    </div>
+  </section>
+
+  <section class="section" id="courses">
+    <h2 class="section-title">دوره‌های در حال ثبت‌نام</h2>
+    <p class="section-sub">ظرفیت‌ها محدود است؛ همین حالا پیش‌ثبت‌نام کنید.</p>
+    <div class="courses-grid" id="coursesGrid"></div>
+  </section>
+
+  <section class="section">
+    <div class="bot-band">
+      <div>
+        <h3>🤖 ثبت‌نام سریع‌تر با بات بله</h3>
+        <p>اگر پیام‌رسان بله را دارید، از طریق بات رسمی مرکز در گفتگوهای ساده چندمرحله‌ای ثبت‌نام کنید و وضعیت خود را همیشه پیگیری نمایید.</p>
+      </div>
+      <a href="#" id="botLink3" class="btn btn-lg" target="_blank" style="display:none">شروع گفتگو با بات</a>
+    </div>
+  </section>
+
+  <footer>
+    <div class="fin">
+      <div>
+        <h4 id="footerCenter">مرکز آموزش مهارتی</h4>
+        <div id="footerAddress">آدرس: —</div>
+      </div>
+      <div>
+        <h4>تماس با ما</h4>
+        <div id="footerPhone">تلفن: —</div>
+      </div>
+    </div>
+    <div style="margin-top:26px; opacity:.7">سامانه پیش‌ثبت‌نام آموزش‌های مهارتی</div>
+  </footer>
+
+  <!-- مودال فرم پیش‌ثبت‌نام -->
+  <div class="modal-mask" id="regModal">
+    <div class="modal">
+      <div class="modal-head">
+        <h3>📝 فرم پیش‌ثبت‌نام</h3>
+        <button class="modal-close" onclick="closeRegModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="regAlert" class="alert alert-err"></div>
+
+        <div id="regForm">
+          <div class="stepper" id="stepper"></div>
+          <div id="stepContent"></div>
+          <div class="modal-foot" style="border:none; padding:18px 0 0">
+            <button class="btn btn-ghost" id="prevBtn" onclick="prevStep()" style="visibility:hidden">قبلی</button>
+            <button class="btn" id="nextBtn" onclick="nextStep()">مرحله بعد ⬅️</button>
+          </div>
+        </div>
+
+        <div id="regSuccess" class="success-view" style="display:none">
+          <div class="big">🎉</div>
+          <h3>پیش‌ثبت‌نام شما با موفقیت ثبت شد</h3>
+          <div>کد رهگیری شما:</div>
+          <div class="code" id="successCode">—</div>
+          <p style="color:var(--muted); font-size:14px">این کد را نگه دارید. کارشناسان مرکز برای تکمیل ثبت‌نام با شما تماس می‌گیرند.</p>
+          <button class="btn" onclick="closeRegModal()">بستن</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
