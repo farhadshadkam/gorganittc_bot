@@ -46,9 +46,9 @@
 
   /* داده نمونه برای حالت نمایشی */
   var D_COURSES = [
-    { id: 'C100', title: 'آموزش خیاطی مقدماتی', category: 'خانگی', capacity: 20, start_date: '1404/09/05', schedule: 'شنبه و دوشنبه ۹ تا ۱۱', status: 'در حال ثبت‌نام', description: 'از صفر تا صد', active_regs: 8 },
-    { id: 'C101', title: 'مهارت‌های ICDL (رایانه)', category: 'رایانه‌ای', capacity: 15, start_date: '1404/09/10', schedule: 'یکشنبه و سه‌شنبه ۱۶ تا ۱۸', status: 'در حال ثبت‌نام', description: 'ICDL', active_regs: 11 },
-    { id: 'C102', title: 'آشپزی و شیرینی‌پزی', category: 'خانگی', capacity: 12, start_date: '1404/09/15', schedule: 'چهارشنبه ۹ تا ۱۲', status: 'به‌زودی', description: 'کاربردی', active_regs: 4 }
+    { id: 'C100', title: 'آموزش خیاطی مقدماتی', category: 'خانگی', capacity: 20, start_date: '1404/09/05', schedule: 'شنبه و دوشنبه ۹ تا ۱۱', status: 'در حال ثبت‌نام', description: 'از صفر تا صد', active_regs: 8, gender: 'ویژه بانوان', cost: '۵۰۰ هزار تومان', hours: '۲۴ ساعت', duration: 'حدود ۲ ماه' },
+    { id: 'C101', title: 'مهارت‌های ICDL (رایانه)', category: 'رایانه‌ای', capacity: 15, start_date: '1404/09/10', schedule: 'یکشنبه و سه‌شنبه ۱۶ تا ۱۸', status: 'در حال ثبت‌نام', description: 'ICDL', active_regs: 11, gender: 'مشترک', cost: '۸۰۰ هزار تومان', hours: '۴۸ ساعت', duration: 'حدود ۲/۵ ماه' },
+    { id: 'C102', title: 'آشپزی و شیرینی‌پزی', category: 'خانگی', capacity: 12, start_date: '1404/09/15', schedule: 'چهارشنبه ۹ تا ۱۲', status: 'به‌زودی', description: 'کاربردی', active_regs: 4, gender: 'ویژه بانوان', cost: 'رایگان', hours: '۳۰ ساعت', duration: 'حدود ۱ ماه' }
   ];
   var D_NAMES = [['زهرا', 'محمدی', 'زن', '09121112233', 'تهران'], ['فاطمه', 'احمدی', 'زن', '09351234567', 'کرج'], ['علی', 'رضایی', 'مرد', '09193334455', 'تهران'], ['حسین', 'کریمی', 'مرد', '09127778899', 'شهریار'], ['مریم', 'حسینی', 'زن', '09365556677', 'اسلامشهر'], ['سمیرا', 'قاسمی', 'زن', '09104445566', 'تهران']];
   var D_STATUS = ['منتظر', 'منتظر', 'ثبت‌نام شده', 'منتظر', 'انصراف داده', 'جواب نداده'];
@@ -372,9 +372,13 @@
   /* ================= دوره‌ها ================= */
   function renderCourses() {
     var stCls = { 'در حال ثبت‌نام': 'b-open', 'به‌زودی': 'b-soon', 'بسته': 'b-closed' };
-    $('coursesTbl').innerHTML = '<thead><tr><th>عنوان</th><th>دسته</th><th>ظرفیت</th><th>ثبت‌نام فعال</th><th>شروع</th><th>زمان‌بندی</th><th>وضعیت</th><th>عملیات</th></tr></thead><tbody>' +
+    $('coursesTbl').innerHTML = '<thead><tr><th>عنوان</th><th>دسته</th><th>مخاطبان</th><th>هزینه / مدت</th><th>ظرفیت</th><th>ثبت‌نام فعال</th><th>شروع</th><th>زمان‌بندی</th><th>وضعیت</th><th>عملیات</th></tr></thead><tbody>' +
       (COURSES || []).map(function (c) {
-        return '<tr><td style="font-weight:700">' + esc(c.title) + '</td><td>' + esc(c.category || '—') + '</td><td>' + fa(c.capacity) + '</td>' +
+        var dur = [c.hours, c.duration].filter(function (x) { return x; }).join(' — ');
+        return '<tr><td style="font-weight:700">' + esc(c.title) + '</td><td>' + esc(c.category || '—') + '</td>' +
+          '<td>' + (c.gender ? '<span class="badge b-gen">' + esc(c.gender) + '</span>' : '—') + '</td>' +
+          '<td style="font-size:12px">' + (c.cost ? '💰 ' + esc(c.cost) : '—') + (dur ? '<br>⏱ ' + esc(dur) : '') + '</td>' +
+          '<td>' + fa(c.capacity) + '</td>' +
           '<td><b style="color:var(--primary-dark)">' + fa(c.active_regs) + '</b></td><td>' + esc(c.start_date || '—') + '</td><td>' + esc(c.schedule || '—') + '</td>' +
           '<td><span class="badge ' + (stCls[c.status] || 'b-closed') + '">' + esc(c.status) + '</span></td>' +
           '<td style="white-space:nowrap"><button class="btn btn-sm btn-ghost" onclick="openCourseModal(\'' + esc(c.id) + '\')">✏️</button> ' +
@@ -393,6 +397,10 @@
     $('c_schedule').value = c ? (c.schedule || '') : '';
     $('c_status').value = c ? c.status : 'در حال ثبت‌نام';
     $('c_description').value = c ? (c.description || '') : '';
+    $('c_gender').value = c ? (c.gender || '') : '';
+    $('c_cost').value = c ? (c.cost || '') : '';
+    $('c_hours').value = c ? (c.hours || '') : '';
+    $('c_duration').value = c ? (c.duration || '') : '';
     $('courseAlert').className = 'alert alert-err';
     refreshCatList(); // پیشنهاد گروه‌های موجود هنگام تایپ
     $('courseModal').classList.add('show');
@@ -402,7 +410,7 @@
     var course = {
       id: $('c_id').value || null, title: $('c_title').value, category: $('c_category').value,
       capacity: $('c_capacity').value, start_date: $('c_start_date').value,
-      schedule: $('c_schedule').value, status: $('c_status').value, description: $('c_description').value
+      schedule: $('c_schedule').value, status: $('c_status').value, description: $('c_description').value, gender: $('c_gender').value, cost: $('c_cost').value, hours: $('c_hours').value, duration: $('c_duration').value
     };
     api('saveCourse', { course: course }).then(function (r) {
       if (!r.ok) { showErr('courseAlert', r.error); return; }

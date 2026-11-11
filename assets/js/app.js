@@ -50,9 +50,9 @@
   }
 
   var DEMO_COURSES = [
-    { id: 'C100', title: 'آموزش خیاطی مقدماتی', category: 'خانگی', capacity: 20, registered: 8, start_date: '1404/09/05', schedule: 'شنبه و دوشنبه ۹ تا ۱۱', description: 'آموزش از صفر تا دوخت لباس ساده' },
-    { id: 'C101', title: 'مهارت‌های ICDL (رایانه)', category: 'رایانه‌ای', capacity: 15, registered: 11, start_date: '1404/09/10', schedule: 'یکشنبه و سه‌شنبه ۱۶ تا ۱۸', description: 'ویندوز، Word، Excel، اینترنت' },
-    { id: 'C102', title: 'آشپزی و شیرینی‌پزی', category: 'خانگی', capacity: 12, registered: 4, start_date: '1404/09/15', schedule: 'چهارشنبه ۹ تا ۱۲', description: 'کاربردی با آزمون فنی‌وحرفه‌ای' }
+    { id: 'C100', title: 'آموزش خیاطی مقدماتی', category: 'خانگی', capacity: 20, registered: 8, start_date: '1404/09/05', schedule: 'شنبه و دوشنبه ۹ تا ۱۱', description: 'آموزش از صفر تا دوخت لباس ساده', gender: 'ویژه بانوان', cost: '۵۰۰ هزار تومان', hours: '۲۴ ساعت', duration: 'حدود ۲ ماه' },
+    { id: 'C101', title: 'مهارت‌های ICDL (رایانه)', category: 'رایانه‌ای', capacity: 15, registered: 11, start_date: '1404/09/10', schedule: 'یکشنبه و سه‌شنبه ۱۶ تا ۱۸', description: 'ویندوز، Word، Excel، اینترنت', gender: 'مشترک', cost: '۸۰۰ هزار تومان', hours: '۴۸ ساعت', duration: 'حدود ۲/۵ ماه' },
+    { id: 'C102', title: 'آشپزی و شیرینی‌پزی', category: 'خانگی', capacity: 12, registered: 4, start_date: '1404/09/15', schedule: 'چهارشنبه ۹ تا ۱۲', description: 'کاربردی با آزمون فنی‌وحرفه‌ای', gender: 'ویژه بانوان', cost: 'رایگان', hours: '۳۰ ساعت', duration: 'حدود ۱ ماه' }
   ];
   function demoApi(action) {
     if (action === 'publicInfo')
@@ -111,12 +111,16 @@
     g.innerHTML = COURSES.map(function (c) {
       var pct = c.capacity ? Math.min(100, Math.round(c.registered * 100 / c.capacity)) : 0;
       var left = Math.max(0, c.capacity - c.registered);
+      var dur = [c.hours, c.duration].filter(function (x) { return x; }).join(' — ');
       return '<div class="course-card">' +
-        '<div class="chips"><span class="badge b-open">' + esc(c.category || 'عمومی') + '</span></div>' +
+        '<div class="chips"><span class="badge b-open">' + esc(c.category || 'عمومی') + '</span>' +
+        (c.gender ? '<span class="badge b-gen">👥 ' + esc(c.gender) + '</span>' : '') + '</div>' +
         '<h3>' + esc(c.title) + '</h3>' +
         '<div class="meta">' +
         (c.start_date ? '<div>📅 شروع: ' + esc(c.start_date) + '</div>' : '') +
         (c.schedule ? '<div>⏰ ' + esc(c.schedule) + '</div>' : '') +
+        (dur ? '<div>⏱ مدت: ' + esc(dur) + '</div>' : '') +
+        (c.cost ? '<div>💰 هزینه: ' + esc(c.cost) + '</div>' : '') +
         '</div>' +
         (c.description ? '<div class="desc">' + esc(c.description) + '</div>' : '') +
         '<div><div class="cap-text"><span>ظرفیت پرشده: ' + c.registered + ' از ' + c.capacity + '</span><span>' + (left > 0 ? left + ' ظرفیت باقی‌مانده' : 'ظرفیت تکمیل') + '</span></div>' +
@@ -178,7 +182,7 @@
       var opts = COURSES.map(function (c) {
         var left = Math.max(0, c.capacity - c.registered);
         return '<label class="' + (DATA.course_id === String(c.id) ? 'active' : '') + '" onclick="pickCourse(\'' + esc(c.id) + '\',this)">' +
-          '<span><b>' + esc(c.title) + '</b><br><small style="color:var(--muted)">' + esc(c.start_date || '') + (c.schedule ? ' — ' + esc(c.schedule) : '') + '</small></span>' +
+          '<span><b>' + esc(c.title) + '</b>' + (c.gender ? '<span class="badge b-gen">👥 ' + esc(c.gender) + '</span>' : '') + '<br><small style="color:var(--muted)">' + esc(c.start_date || '') + (c.schedule ? ' — ' + esc(c.schedule) : '') + '</small></span>' +
           '<span class="badge ' + (left > 0 ? 'b-reg' : 'b-closed') + '">' + (left > 0 ? left + ' ظرفیت' : 'تکمیل') + '</span></label>';
       }).join('');
       return '<h4 style="margin-bottom:14px">۱) انتخاب دوره</h4><div class="course-pick">' + opts + '</div>';
@@ -354,7 +358,7 @@
         '<div class="field"><label>کد ملی (۱۰ رقم) <span class="req">*</span></label><input class="input" id="r_nc" inputmode="numeric" value="' + esc(RDATA.national_code) + '"></div>' +
         '<div class="field"><label>شماره موبایل <span class="req">*</span></label><input class="input" id="r_mobile" inputmode="tel" placeholder="09xxxxxxxxx" value="' + esc(RDATA.mobile) + '"></div>' +
         '</div>' +
-        '<div class="hint">کد ملی برای پیگیری درخواست‌هایتان استفاده می‌شود.</div>';
+        '<div class="hint">کد ملی و شماره موبایل برای پیگیری درخواست‌هایتان استفاده می‌شود؛ همان‌ها را بعداً در «🔎 پیگیری درخواست» وارد کنید.</div>';
     },
     function () {
       function row(k, v) { return '<div><span>' + k + '</span><span>' + (v || '—') + '</span></div>'; }
@@ -474,11 +478,15 @@
     $('followResult').innerHTML = '';
     $('followAlert').className = 'alert alert-err';
     $('followNc').value = '';
+    $('followMobile').value = '';
     $('followModal').classList.add('show');
   };
   window.closeFollowModal = function () { $('followModal').classList.remove('show'); };
   window.lookupReq = function () {
-    var nc = ($('followNc').value || '').trim();
+    var nc = normDigits(($('followNc').value || '').trim()).replace(/\D/g, '');
+    var mob = normDigits(($('followMobile').value || '').trim()).replace(/[+\s-]/g, '');
+    if (mob.length === 12 && mob.indexOf('98') === 0) mob = '0' + mob.slice(2); // +98/98xxx
+    if (mob.length === 10 && mob.charAt(0) === '9') mob = '0' + mob;             // بدون صفر اول
     $('followAlert').className = 'alert alert-err';
     if (!validNationalCode(nc)) {
       var a = $('followAlert');
@@ -486,8 +494,14 @@
       a.className = 'alert alert-err show';
       return;
     }
+    if (!validMobile(mob)) {
+      var a2 = $('followAlert');
+      a2.textContent = '⚠️ شماره موبایل با ۰۹ شروع شود و ۱۱ رقم باشد.';
+      a2.className = 'alert alert-err show';
+      return;
+    }
     $('followResult').innerHTML = '<p style="color:var(--muted)">⏳ در حال جستجو...</p>';
-    api('myRequests', { national_code: nc }).then(function (r) {
+    api('myRequests', { national_code: nc, mobile: mob }).then(function (r) {
       if (!r.ok) {
         $('followResult').innerHTML = '';
         var a = $('followAlert');
@@ -496,7 +510,7 @@
         return;
       }
       if (!r.rows.length) {
-        $('followResult').innerHTML = '<div class="follow-card" style="text-align:center; color:var(--muted)">درخواستی با این کد ملی ثبت نشده است.</div>';
+        $('followResult').innerHTML = '<div class="follow-card" style="text-align:center; color:var(--muted)">درخواستی با این کد ملی و شماره موبایل ثبت نشده است.<br><small>اگر درخواست دارید اما با شماره دیگری ثبت کرده‌اید، همان شماره را وارد کنید.</small></div>';
         return;
       }
       $('followResult').innerHTML = '<div class="follow-card"><h4 style="margin-bottom:8px">درخواست‌های شما:</h4>' +
