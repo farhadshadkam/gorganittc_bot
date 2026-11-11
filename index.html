@@ -52,6 +52,8 @@
     .req-band { background: linear-gradient(135deg, #f0fdfa, #ccfbf1); border: 1px solid #99f6e4; border-radius: var(--radius); padding: 26px; display: flex; align-items: center; gap: 20px; justify-content: space-between; flex-wrap: wrap; margin-top: 28px; }
     .req-band h3 { color: var(--primary-dark); }
     .req-band p { color: #0f766e; font-size: 14px; }
+    .req-band-btns { display: flex; gap: 10px; flex-wrap: wrap; }
+    @media (max-width: 640px) { .req-band-btns { width: 100%; } .req-band-btns .btn { flex: 1; } }
     .sug-list { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-top: 6px; background: #fff; }
     .sug-item { padding: 9px 14px; font-size: 14px; cursor: pointer; border-bottom: 1px solid var(--border); }
     .sug-item:last-child { border-bottom: none; }
@@ -124,9 +126,12 @@
     <div class="req-band">
       <div>
         <h3>📌 دوره موردنظرتان را پیدا نکردید؟</h3>
-        <p>عنوان دوره دلخواهتان را ثبت کنید؛ کارشناسان مرکز بررسی می‌کنند و نتیجه را می‌توانید با کد ملی پیگیری کنید.</p>
+        <p>عنوان دوره دلخواهتان را ثبت کنید؛ کارشناسان مرکز بررسی می‌کنند و نتیجه را می‌توانید هر زمان با کد ملی و شماره موبایل پیگیری کنید.</p>
       </div>
-      <button class="btn btn-accent btn-lg" onclick="openReqModal()">✍️ ثبت درخواست دوره جدید</button>
+      <div class="req-band-btns">
+        <button class="btn btn-accent btn-lg" onclick="openReqModal()">✍️ ثبت درخواست دوره جدید</button>
+        <button class="btn btn-lg btn-ghost" style="background:#fff" onclick="openFollowModal()">🔎 پیگیری درخواست</button>
+      </div>
     </div>
   </section>
 
@@ -223,13 +228,17 @@
     <div class="modal" style="max-width:580px">
       <div class="modal-head"><h3>🔎 پیگیری درخواست‌های دوره</h3><button class="modal-close" onclick="closeFollowModal()">×</button></div>
       <div class="modal-body">
-        <div class="field"><label>کد ملی خود را وارد کنید</label>
-          <div style="display:flex; gap:8px">
+        <p style="font-size:13.5px; color:var(--muted); margin-bottom:12px">همان کد ملی و شماره موبایلی را وارد کنید که هنگام ثبت درخواست وارد کردید.</p>
+        <div class="form-grid">
+          <div class="field"><label>کد ملی (۱۰ رقم) <span class="req">*</span></label>
             <input class="input" id="followNc" inputmode="numeric" placeholder="کد ملی ۱۰ رقمی" onkeydown="if(event.key==='Enter')lookupReq()">
-            <button class="btn" onclick="lookupReq()">جستجو</button>
+          </div>
+          <div class="field"><label>شماره موبایل <span class="req">*</span></label>
+            <input class="input" id="followMobile" inputmode="tel" placeholder="09xxxxxxxxx" onkeydown="if(event.key==='Enter')lookupReq()">
           </div>
         </div>
-        <div id="followAlert" class="alert alert-err"></div>
+        <button class="btn" style="width:100%; margin-top:6px" onclick="lookupReq()">🔍 جستجوی درخواست‌ها</button>
+        <div id="followAlert" class="alert alert-err" style="margin-top:14px"></div>
         <div id="followResult"></div>
       </div>
     </div>
