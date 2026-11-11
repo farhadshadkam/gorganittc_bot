@@ -81,6 +81,7 @@ h1, h2, h3, h4 { font-weight: 800; line-height: 1.6; }
 .b-closed { background: #e2e8f0; color: #475569; }
 .b-web { background: #dbeafe; color: #1e40af; }
 .b-bot { background: var(--primary-light); color: var(--primary-dark); }
+.b-gen { background: #ede9fe; color: #5b21b6; }  /* مخاطبان دوره: آقایان/بانوان/مشترک */
 
 /* ---------- پیشنهاد هوشمند عنوان (فرم درخواست دوره) ---------- */
 .sug-list { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
