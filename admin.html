@@ -6,6 +6,7 @@
   <title>پنل مدیریت — سامانه پیش‌ثبت‌نام مهارتی</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
   <link rel="stylesheet" href="assets/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
     body { background: var(--bg); }
     .demo-banner { background: #fef9c3; color: #854d0e; text-align: center; padding: 8px 14px; font-size: 13px; display: none; }
@@ -69,6 +70,15 @@
     .bulkbar { display: none; gap: 10px; align-items: center; flex-wrap: wrap; background: #fffbeb; border: 1px solid #fde68a; padding: 12px 16px; border-radius: 12px; margin-bottom: 16px; font-size: 13.5px; }
     .bulkbar.show { display: flex; }
 
+    /* ---------- نمودارها (نسخه ۳) ---------- */
+    .chart-card { background: #fff; border-radius: 14px; box-shadow: var(--shadow); padding: 20px; margin-top: 20px; }
+    .chart-card h3 { color: var(--primary-dark); margin-bottom: 14px; font-size: 16px; }
+    .chart-wrap { position: relative; max-height: 430px; }
+    .switch-row { display: flex; gap: 10px; flex-wrap: wrap; background: #f0fdfa; border: 1px solid #ccfbf1; border-radius: 12px; padding: 12px 14px; margin-top: 4px; }
+    .switch { display: flex; gap: 8px; align-items: center; cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--primary-dark); user-select: none; }
+    .switch input { width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer; }
+    .switch .hint-inline { font-weight: 400; color: var(--muted); font-size: 12px; }
+
     /* ---------- ریسپانسیو ---------- */
     @media (max-width: 900px) {
       .sidebar { width: 64px; }
@@ -104,6 +114,7 @@
         <a data-page="regs" onclick="showPage('regs')">📋 <span class="txt">ثبت‌نام‌ها</span></a>
         <a data-page="requests" onclick="showPage('requests')">📥 <span class="txt">درخواست دوره</span></a>
         <a data-page="courses" onclick="showPage('courses')">🎓 <span class="txt">بانک دوره‌ها</span></a>
+        <a data-page="workshops" onclick="showPage('workshops')">🏭 <span class="txt">کارگاه‌ها</span></a>
         <a data-page="broadcast" onclick="showPage('broadcast')">✉️ <span class="txt">پیام بله</span></a>
         <a data-page="reports" onclick="showPage('reports')">📈 <span class="txt">گزارش‌ها</span></a>
         <a data-page="catreport" onclick="showPage('catreport')">🗂 <span class="txt">گزارش گروه‌ها</span></a>
@@ -161,7 +172,10 @@
       <!-- درخواست دوره -->
       <section class="page" id="page-requests">
         <div class="page-head"><h2>📥 درخواست‌های دوره جدید</h2>
-          <button class="btn btn-sm btn-ghost" onclick="loadRequests()">🔄</button>
+          <div style="display:flex; gap:8px">
+            <button class="btn btn-sm btn-ghost" onclick="openReqChart()">📊 نمودار درخواست‌ها</button>
+            <button class="btn btn-sm btn-ghost" onclick="loadRequests()">🔄</button>
+          </div>
         </div>
         <div id="reqsAlert" class="alert alert-err"></div>
         <p style="color:var(--muted); font-size:13.5px; margin-bottom:12px">درخواست‌هایی که کاربران برای برگزاری دوره‌های جدید ثبت کرده‌اند. با «بررسی»، وضعیت اقدام و گروه‌بندی دوره را مشخص می‌کنید.</p>
@@ -179,7 +193,38 @@
           <button class="btn btn-sm" onclick="openCourseModal()">➕ افزودن دوره</button>
         </div>
         <div id="coursesAlert" class="alert alert-err"></div>
+        <div class="toolbar">
+          <input class="input" id="qCourse" placeholder="🔍 جستجو: عنوان دوره / نام مدرس / کارگاه..." oninput="renderCourses()" style="min-width:260px">
+          <select class="input" id="fCourseStatus" onchange="renderCourses()">
+            <option value="">همه وضعیت‌ها</option>
+            <option value="در حال ثبت‌نام">🟢 در حال ثبت‌نام (باز)</option>
+            <option value="به‌زودی">📅 به‌زودی</option>
+            <option value="بسته">🔒 بسته</option>
+          </select>
+          <select class="input" id="fCourseWs" onchange="renderCourses()"><option value="">همه کارگاه‌ها</option></select>
+          <span class="badge b-bot" id="courseCount"></span>
+        </div>
         <div class="table-wrap"><table class="tbl" id="coursesTbl"></table></div>
+      </section>
+
+      <!-- کارگاه‌ها (نسخه ۳) -->
+      <section class="page" id="page-workshops">
+        <div class="page-head"><h2>🏭 کارگاه‌های مرکز</h2>
+          <button class="btn btn-sm btn-ghost" onclick="loadWorkshops()">🔄</button>
+        </div>
+        <div id="wsAlert" class="alert alert-err"></div>
+        <p style="color:var(--muted); font-size:13.5px; margin-bottom:12px">عنوان دقیق کارگاه‌ها از قبل نوشته شده است؛ هنگام تعریف دوره، نام کارگاه فقط از همین فهرست قابل انتخاب است. گزارش جدولی و نمودار زیر فقط دوره‌های <b>باز</b> را می‌شمارد.</p>
+        <div class="toolbar">
+          <input class="input" id="wsTitle" placeholder="عنوان دقیق کارگاه جدید..." style="min-width:260px" onkeydown="if(event.key==='Enter')saveWorkshop(null)">
+          <button class="btn btn-sm" onclick="saveWorkshop(null)">➕ افزودن کارگاه</button>
+        </div>
+        <div class="table-wrap"><table class="tbl" id="wsTbl"></table></div>
+        <h3 style="margin:26px 0 12px; color:var(--primary-dark)">📋 گزارش جدولی کارگاه‌ها (ظرفیت و ثبت‌نام فقط برای دوره‌های باز)</h3>
+        <div class="table-wrap"><table class="tbl" id="wsRepTbl"></table></div>
+        <div class="chart-card">
+          <h3>📊 نمودار مقایسه ظرفیت و ثبت‌نام (فقط دوره‌های باز)</h3>
+          <div class="chart-wrap"><canvas id="wsChart"></canvas></div>
+        </div>
       </section>
 
       <!-- پیام بله -->
@@ -293,6 +338,16 @@
           <div class="field"><label>هزینه دوره (توضیح)</label><input class="input" id="c_cost" placeholder="مثال: ۵۰۰ هزار تومان یا رایگان"></div>
           <div class="field"><label>طول دوره (توضیح مختصر)</label><input class="input" id="c_duration" placeholder="مثال: حدود ۲ ماه، ۱۶ جلسه"></div>
         </div>
+        <div class="form-grid">
+          <div class="field"><label>نام مدرس</label><input class="input" id="c_instructor" placeholder="مثال: استاد رضایی"></div>
+          <div class="field"><label>نام کارگاه (فقط از فهرست کارگاه‌ها)</label>
+            <select class="input" id="c_workshop"><option value="">— انتخاب نشده —</option></select>
+          </div>
+        </div>
+        <div class="switch-row">
+          <label class="switch"><input type="checkbox" id="c_show_instructor"> نمایش نام مدرس در اطلاع‌رسانی <span class="hint-inline">(ربات و وب‌سایت)</span></label>
+          <label class="switch"><input type="checkbox" id="c_show_workshop"> نمایش نام کارگاه در اطلاع‌رسانی <span class="hint-inline">(ربات و وب‌سایت)</span></label>
+        </div>
         <div class="field"><label>توضیحات</label><textarea class="input" id="c_description" rows="3"></textarea></div>
       </div>
       <div class="modal-foot">
@@ -351,6 +406,19 @@
       <div class="modal-foot">
         <button class="btn btn-ghost" onclick="closeModal('adminModal')">انصراف</button>
         <button class="btn" onclick="saveAdmin()">💾 ذخیره</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- مودال نمودار درخواست‌های دوره (نسخه ۳) -->
+  <div class="modal-mask" id="reqChartModal">
+    <div class="modal" style="max-width:760px">
+      <div class="modal-head"><h3>📊 نمودار درخواست‌های دوره (عنوان + تعداد)</h3><button class="modal-close" onclick="closeModal('reqChartModal')">×</button></div>
+      <div class="modal-body">
+        <div class="chart-wrap" style="max-height:480px"><canvas id="reqChart"></canvas></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" onclick="closeModal('reqChartModal')">بستن</button>
       </div>
     </div>
   </div>
