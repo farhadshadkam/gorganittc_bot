@@ -10,9 +10,15 @@
   var STATUS_CLASS = { 'منتظر': 'b-wait', 'ثبت‌نام شده': 'b-reg', 'انصراف داده': 'b-withdraw', 'جواب نداده': 'b-noans', 'سایر': 'b-other' };
   var STATUS_ICON = { 'منتظر': '⏳', 'ثبت‌نام شده': '✅', 'انصراف داده': '🚫', 'جواب نداده': '📵', 'سایر': '📌' };
   var REGS = [], COURSES = [], DASH = null, SELECTED = {}, DETAIL_REG = null, BC_IDS = null;
+  var WS = []; // فهرست کارگاه‌ها (نسخه ۳)
+  var WS_CHART = null, REQ_CHART = null; // نمونه‌های Chart.js — قبل از هر رسم جدید نابود می‌شوند
+  var CHART_COLORS = { capacity: '#0f766e', regs: '#f59e0b', req: '#6366f1' };
+  var CHART_FONT = { family: 'Vazirmatn, Tahoma, sans-serif' };
+  function faNum(n) { return String(n).replace(/\d/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'[d]; }); }
   var REQ_STATUSES = [ // دقیقاً هم‌خوان با REQ_STATUSES در Utils.gs بک‌اند
     'فعلاً بررسی نشده',
     'بررسی شد؛ در اسرع وقت برگزار می‌شود',
+    'دعوت شده',
     'بررسی شد؛ به‌دلیل نبود مربی فعلاً قابل برگزاری نیست و در برنامه‌ریزی قرار می‌گیرد',
     'به‌دلیل ضوابط سازمان و مرکز، متأسفانه قابل برگزاری نیست'
   ];
@@ -46,12 +52,19 @@
 
   /* داده نمونه برای حالت نمایشی */
   var D_COURSES = [
-    { id: 'C100', title: 'آموزش خیاطی مقدماتی', category: 'خانگی', capacity: 20, start_date: '1404/09/05', schedule: 'شنبه و دوشنبه ۹ تا ۱۱', status: 'در حال ثبت‌نام', description: 'از صفر تا صد', active_regs: 8, gender: 'ویژه بانوان', cost: '۵۰۰ هزار تومان', hours: '۲۴ ساعت', duration: 'حدود ۲ ماه' },
-    { id: 'C101', title: 'مهارت‌های ICDL (رایانه)', category: 'رایانه‌ای', capacity: 15, start_date: '1404/09/10', schedule: 'یکشنبه و سه‌شنبه ۱۶ تا ۱۸', status: 'در حال ثبت‌نام', description: 'ICDL', active_regs: 11, gender: 'مشترک', cost: '۸۰۰ هزار تومان', hours: '۴۸ ساعت', duration: 'حدود ۲/۵ ماه' },
-    { id: 'C102', title: 'آشپزی و شیرینی‌پزی', category: 'خانگی', capacity: 12, start_date: '1404/09/15', schedule: 'چهارشنبه ۹ تا ۱۲', status: 'به‌زودی', description: 'کاربردی', active_regs: 4, gender: 'ویژه بانوان', cost: 'رایگان', hours: '۳۰ ساعت', duration: 'حدود ۱ ماه' }
+    { id: 'C100', title: 'آموزش خیاطی مقدماتی', category: 'خانگی', capacity: 20, start_date: '1404/09/05', schedule: 'شنبه و دوشنبه ۹ تا ۱۱', status: 'در حال ثبت‌نام', description: 'از صفر تا صد', active_regs: 8, gender: 'ویژه بانوان', cost: '۵۰۰ هزار تومان', hours: '۲۴ ساعت', duration: 'حدود ۲ ماه', instructor: 'استاد محمدی', workshop: 'کارگاه آموزش خیاطی', show_instructor: true, show_workshop: true },
+    { id: 'C101', title: 'مهارت‌های ICDL (رایانه)', category: 'رایانه‌ای', capacity: 15, start_date: '1404/09/10', schedule: 'یکشنبه و سه‌شنبه ۱۶ تا ۱۸', status: 'در حال ثبت‌نام', description: 'ICDL', active_regs: 11, gender: 'مشترک', cost: '۸۰۰ هزار تومان', hours: '۴۸ ساعت', duration: 'حدود ۲/۵ ماه', instructor: 'استاد کریمی', workshop: 'کارگاه ICDL و مهارت‌های رایانه‌ای', show_instructor: true, show_workshop: true },
+    { id: 'C102', title: 'آشپزی و شیرینی‌پزی', category: 'خانگی', capacity: 12, start_date: '1404/09/15', schedule: 'چهارشنبه ۹ تا ۱۲', status: 'به‌زودی', description: 'کاربردی', active_regs: 4, gender: 'ویژه بانوان', cost: 'رایگان', hours: '۳۰ ساعت', duration: 'حدود ۱ ماه', instructor: '', workshop: 'کارگاه آموزش آشپزی و شیرینی‌پزی', show_instructor: false, show_workshop: true }
   ];
   var D_NAMES = [['زهرا', 'محمدی', 'زن', '09121112233', 'تهران'], ['فاطمه', 'احمدی', 'زن', '09351234567', 'کرج'], ['علی', 'رضایی', 'مرد', '09193334455', 'تهران'], ['حسین', 'کریمی', 'مرد', '09127778899', 'شهریار'], ['مریم', 'حسینی', 'زن', '09365556677', 'اسلامشهر'], ['سمیرا', 'قاسمی', 'زن', '09104445566', 'تهران']];
   var D_STATUS = ['منتظر', 'منتظر', 'ثبت‌نام شده', 'منتظر', 'انصراف داده', 'جواب نداده'];
+  var D_DELETED = {}; // شبیه‌ساز حذف در حالت نمایشی
+  var D_WS = [ // فهرست کارگاه‌های حالت نمایشی
+    { id: 'W101', title: 'کارگاه آموزش خیاطی', created_at: '1404/08/01' },
+    { id: 'W102', title: 'کارگاه آموزش آشپزی و شیرینی‌پزی', created_at: '1404/08/01' },
+    { id: 'W103', title: 'کارگاه ICDL و مهارت‌های رایانه‌ای', created_at: '1404/08/01' },
+    { id: 'W104', title: 'کارگاه تعمیرات تلفن همراه', created_at: '1404/08/01' }
+  ];
   function demoRegs() {
     return D_NAMES.map(function (n, i) {
       var c = D_COURSES[i % 3];
@@ -83,10 +96,51 @@
           recent: demoRegs().slice(0, 5).reverse()
         });
       }
-      case 'listRegs': return ok({ rows: demoRegs().filter(function (r) { return (!d.status || r.status === d.status) && (!d.course_id || r.course_id === d.course_id) && (!d.source || r.source === d.source); }), statuses: STATUSES });
+      case 'listRegs': return ok({ rows: demoRegs().filter(function (r) { return !D_DELETED[r.reg_id] && (!d.status || r.status === d.status) && (!d.course_id || r.course_id === d.course_id) && (!d.source || r.source === d.source); }), statuses: STATUSES });
+      case 'deleteReg': D_DELETED[String(d.reg_id)] = 1; return ok({ deleted: 'R-10000' });
       case 'getCourses': return ok({ rows: D_COURSES });
-      case 'saveCourse': return ok({});
+      case 'saveCourse': {
+        var dc = d.course || {};
+        if (dc.id) {
+          for (var i = 0; i < D_COURSES.length; i++) {
+            if (D_COURSES[i].id === String(dc.id)) {
+              for (var k in dc) if (k !== 'id') D_COURSES[i][k] = dc[k];
+              D_COURSES[i].show_instructor = String(dc.show_instructor) === 'بله';
+              D_COURSES[i].show_workshop = String(dc.show_workshop) === 'بله';
+            }
+          }
+        } else {
+          var nid = 'C' + (200 + D_COURSES.length);
+          D_COURSES.push(Object.assign({ id: nid, active_regs: 0, status: 'در حال ثبت‌نام', gender: '', cost: '', hours: '', duration: '', instructor: '', workshop: '' }, dc, {
+            id: nid, capacity: Number(dc.capacity) || 0,
+            show_instructor: String(dc.show_instructor) === 'بله', show_workshop: String(dc.show_workshop) === 'بله'
+          }));
+        }
+        return ok({});
+      }
       case 'deleteCourse': return ok({});
+      case 'getWorkshops': return ok({ rows: D_WS });
+      case 'saveWorkshop': {
+        var w = d.workshop || {};
+        if (w.id) {
+          D_WS.forEach(function (x) { if (x.id === String(w.id)) x.title = w.title; });
+          return ok({ id: String(w.id) });
+        }
+        var wid = 'W' + (105 + D_WS.length);
+        D_WS.push({ id: wid, title: w.title, created_at: '1404/08/20' });
+        return ok({ id: wid });
+      }
+      case 'deleteWorkshop': D_WS = D_WS.filter(function (x) { return x.id !== String(d.id); }); return ok({});
+      case 'workshopReport': return ok({ rows: [
+        { key: 'w1', label: 'کارگاه آموزش خیاطی', open: 1, capacity: 20, regs: 8, soon: 0, closed: 0 },
+        { key: 'w2', label: 'کارگاه آموزش آشپزی و شیرینی‌پزی', open: 0, capacity: 0, regs: 0, soon: 1, closed: 0 },
+        { key: 'w3', label: 'کارگاه ICDL و مهارت‌های رایانه‌ای', open: 1, capacity: 15, regs: 11, soon: 0, closed: 0 }
+      ] });
+      case 'requestStats': return ok({ rows: [
+        { key: 'r1', title: 'تعمیرات موبایل', count: 4 },
+        { key: 'r2', title: 'گلدوزی و سوزن‌دوزی', count: 2 },
+        { key: 'r3', title: 'کار با چرم', count: 1 }
+      ] });
       case 'setStatus': case 'bulkSetStatus': case 'moveReg': return ok({});
       case 'broadcast': return ok({ total: 4, sent: 2, failed: 2, failures: [{ reg_code: 'R-10003', name: 'علی رضایی', reason: 'بدون حساب بله' }, { reg_code: 'R-10005', name: 'مریم حسینی', reason: 'بدون حساب بله' }] });
       case 'getBroadcasts': return ok({ rows: [{ id: 'B1001', ts: '1404/08/18 09:30', admin: 'مدیر', text: 'دوره خیاطی شنبه آغاز می‌شود.', filter_desc: 'دوره: C100 | وضعیت: منتظر', total: 4, sent: 2, failed: 2 }] });
@@ -96,7 +150,8 @@
       case 'saveSettings': return ok({});
       case 'getRequests': return ok({ rows: [
         { id: 'Q1001', title: 'تعمیرات موبایل', category: 'فنی', first_name: 'علی', last_name: 'رضایی', national_code: '0012345679', mobile: '09193334455', chat_id: '', source: 'web', status: REQ_STATUSES[0], admin_note: '', handled_by: '', created_at: '1404/08/18 10:20', updated_at: '1404/08/18 10:20' },
-        { id: 'Q1002', title: 'گلدوزی و سوزن‌دوزی', category: 'خانگی', first_name: 'زهرا', last_name: 'محمدی', national_code: '0020867891', mobile: '09121112233', chat_id: '123456789', source: 'bot', status: REQ_STATUSES[2], admin_note: 'در انتظار معرفی مربی', handled_by: 'کارشناس ثبت‌نام', created_at: '1404/08/17 14:00', updated_at: '1404/08/18 09:00' }
+        { id: 'Q1002', title: 'گلدوزی و سوزن‌دوزی', category: '', first_name: 'زهرا', last_name: 'محمدی', national_code: '0020867891', mobile: '09121112233', chat_id: '123456789', source: 'bot', status: REQ_STATUSES[3], admin_note: 'در انتظار معرفی مربی', handled_by: 'کارشناس ثبت‌نام', created_at: '1404/08/17 14:00', updated_at: '1404/08/18 09:00' },
+        { id: 'Q1003', title: 'کار با چرم', category: 'هنری', first_name: 'حسین', last_name: 'کریمی', national_code: '0030967802', mobile: '09127778899', chat_id: '987654321', source: 'bot', status: REQ_STATUSES[2], admin_note: 'دعوت به گروه هنری؛ مراجعه کنید', handled_by: 'مدیر', created_at: '1404/08/16 11:10', updated_at: '1404/08/18 10:05' }
       ], statuses: REQ_STATUSES });
       case 'setRequest': return ok({});
       case 'getCategories': return ok({ categories: ['خانگی', 'رایانه‌ای', 'فنی', 'هنری'] });
@@ -159,6 +214,7 @@
       renderCourses();
     });
     loadRegs();
+    loadWorkshops(); // کارگاه‌ها برای منوی کارگاه‌ها + فیلتر بانک دوره‌ها + فرم دوره
     if ($('page-settings').classList.contains('show')) loadSettings();
     if ($('page-reports').classList.contains('show')) loadReports();
     fillReqStatusSelects();
@@ -205,6 +261,7 @@
     if (name === 'reports') loadReports();
     if (name === 'settings') loadSettings();
     if (name === 'courses') renderCourses();
+    if (name === 'workshops') loadWorkshops();
     if (name === 'requests') loadRequests();
     if (name === 'catreport') loadCategoryReport();
   };
@@ -279,12 +336,25 @@
         '<td><select class="input" style="padding:4px 8px; font-size:12.5px; min-width:120px" onchange="quickStatus(\'' + r.reg_id + '\', this.value)">' + opts + '</select></td>' +
         '<td>' + srcBadge(r.source) + '</td>' +
         '<td style="white-space:nowrap; font-size:12px; color:var(--muted)">' + esc(r.created_at) + '</td>' +
+        '<td><button class="btn btn-sm btn-danger" title="حذف کامل این ثبت‌نام" onclick="delReg(\'' + r.reg_id + '\')">🗑</button></td>' +
         '</tr>';
     }).join('');
-    $('regsTbl').innerHTML = '<thead><tr><th><input type="checkbox" onchange="toggleAll(this.checked)" style="cursor:pointer"></th><th>کد</th><th>نام</th><th>کدملی/موبایل</th><th>دوره</th><th>وضعیت</th><th>منبع</th><th>تاریخ ثبت</th></tr></thead><tbody>' +
-      (rows || '<tr><td colspan="8" style="text-align:center; color:var(--muted); padding:30px">موردی یافت نشد</td></tr>') + '</tbody>';
+    $('regsTbl').innerHTML = '<thead><tr><th><input type="checkbox" onchange="toggleAll(this.checked)" style="cursor:pointer"></th><th>کد</th><th>نام</th><th>کدملی/موبایل</th><th>دوره</th><th>وضعیت</th><th>منبع</th><th>تاریخ ثبت</th><th>حذف</th></tr></thead><tbody>' +
+      (rows || '<tr><td colspan="9" style="text-align:center; color:var(--muted); padding:30px">موردی یافت نشد</td></tr>') + '</tbody>';
     updateBulkbar();
   }
+
+  /** حذف کامل یک ثبت‌نام (نسخه ۳) — با تأیید؛ رکورد تستی/الکی را برای همیشه پاک می‌کند */
+  window.delReg = function (regId) {
+    var r = REGS.filter(function (x) { return x.reg_id === regId; })[0];
+    if (!r) return;
+    if (!confirm('حذف کامل این ثبت‌نام؟\n\nکد: ' + r.reg_code + '\nنام: ' + r.first_name + ' ' + r.last_name + '\nدوره: ' + r.course_title + '\n\n⚠️ ردیف به‌طور کامل از سامانه پاک می‌شود و قابل بازگشت نیست.')) return;
+    api('deleteReg', { reg_id: regId }).then(function (res) {
+      if (!res.ok) { showErr('regsAlert', res.error); return; }
+      showOk('regsAlert', 'ثبت‌نام ' + (res.deleted || r.reg_code) + ' حذف شد.');
+      loadRegs(); // ظرفیت‌ها و نمودارها هم تازه می‌شوند (کش پشت‌صحنه باطل شده است)
+    }).catch(function (e) { showErr('regsAlert', e.message); });
+  };
 
   window.toggleSel = function (id, checked) { if (checked) SELECTED[id] = true; else delete SELECTED[id]; updateBulkbar(); };
   window.toggleAll = function (checked) {
@@ -332,7 +402,10 @@
       row('حساب بله', r.chat_id ? '✅ متصل' : '—') + row('یادداشت', esc(r.note)) +
       '<div class="field" style="margin-top:16px"><label>انتقال به دوره دیگر (وضعیت به «منتظر» برمی‌گردد)</label>' +
       '<select class="input" id="d_course">' + courseOpts + '</select></div>' +
-      '<div class="field"><label>یادداشت ادمین</label><input class="input" id="d_note" value="' + esc(r.note) + '"></div>';
+      '<div class="field"><label>یادداشت ادمین</label><input class="input" id="d_note" value="' + esc(r.note) + '"></div>' +
+      '<div style="margin-top:16px; border-top:1px dashed var(--border); padding-top:12px">' +
+      '<button class="btn btn-danger btn-sm" onclick="closeModal(\'detailModal\'); delReg(\'' + r.reg_id + '\')">🗑 حذف کامل این ثبت‌نام</button>' +
+      '<div class="hint">برای رکوردهای تستی یا ثبت‌های وارده بی‌نام — پس از تأیید، ردیف برای همیشه پاک می‌شود.</div></div>';
     $('detailModal').classList.add('show');
   };
 
@@ -370,20 +443,63 @@
   };
 
   /* ================= دوره‌ها ================= */
-  function renderCourses() {
+  /** فیلتر بانک دوره‌ها (نسخه ۳): وضعیت باز/بسته، عنوان دوره، نام مدرس، کارگاه */
+  window.renderCourses = function () {
     var stCls = { 'در حال ثبت‌نام': 'b-open', 'به‌زودی': 'b-soon', 'بسته': 'b-closed' };
-    $('coursesTbl').innerHTML = '<thead><tr><th>عنوان</th><th>دسته</th><th>مخاطبان</th><th>هزینه / مدت</th><th>ظرفیت</th><th>ثبت‌نام فعال</th><th>شروع</th><th>زمان‌بندی</th><th>وضعیت</th><th>عملیات</th></tr></thead><tbody>' +
-      (COURSES || []).map(function (c) {
+    var q = ($('qCourse') ? $('qCourse').value : '').trim().toLowerCase().replace(/\u200C/g, ' ');
+    var fSt = $('fCourseStatus') ? $('fCourseStatus').value : '';
+    var fWs = $('fCourseWs') ? $('fCourseWs').value : '';
+    var list = (COURSES || []).filter(function (c) {
+      if (fSt && c.status !== fSt) return false;
+      if (fWs && String(c.workshop || '') !== fWs) return false;
+      if (q) {
+        var hay = [c.title, c.category, c.instructor, c.workshop].join(' ')
+          .toLowerCase().replace(/\u200C/g, ' ');
+        if (hay.indexOf(q) === -1) return false;
+      }
+      return true;
+    });
+    if ($('courseCount')) $('courseCount').textContent = faNum(list.length) + ' دوره از ' + faNum((COURSES || []).length);
+    $('coursesTbl').innerHTML = '<thead><tr><th>عنوان</th><th>دسته</th><th>مخاطبان</th><th>هزینه / مدت</th><th>مدرس / کارگاه</th><th>ظرفیت</th><th>ثبت‌نام فعال</th><th>شروع</th><th>زمان‌بندی</th><th>وضعیت</th><th>عملیات</th></tr></thead><tbody>' +
+      (list.map(function (c) {
         var dur = [c.hours, c.duration].filter(function (x) { return x; }).join(' — ');
+        var iw = [];
+        if (c.instructor) iw.push('🎓 ' + esc(c.instructor) + (c.show_instructor ? ' <span class="badge b-reg" title="در اطلاع‌رسانی نمایش داده می‌شود">نمایش ✔</span>' : ' <span class="badge b-noans" title="در اطلاع‌رسانی پنهان است">پنهان</span>'));
+        if (c.workshop) iw.push('🏭 ' + esc(c.workshop) + (c.show_workshop ? ' <span class="badge b-reg" title="در اطلاع‌رسانی نمایش داده می‌شود">نمایش ✔</span>' : ' <span class="badge b-noans" title="در اطلاع‌رسانی پنهان است">پنهان</span>'));
         return '<tr><td style="font-weight:700">' + esc(c.title) + '</td><td>' + esc(c.category || '—') + '</td>' +
           '<td>' + (c.gender ? '<span class="badge b-gen">' + esc(c.gender) + '</span>' : '—') + '</td>' +
           '<td style="font-size:12px">' + (c.cost ? '💰 ' + esc(c.cost) : '—') + (dur ? '<br>⏱ ' + esc(dur) : '') + '</td>' +
-          '<td>' + fa(c.capacity) + '</td>' +
-          '<td><b style="color:var(--primary-dark)">' + fa(c.active_regs) + '</b></td><td>' + esc(c.start_date || '—') + '</td><td>' + esc(c.schedule || '—') + '</td>' +
+          '<td style="font-size:12.5px">' + (iw.length ? iw.join('<br>') : '—') + '</td>' +
+          '<td>' + faNum(c.capacity) + '</td>' +
+          '<td><b style="color:var(--primary-dark)">' + faNum(c.active_regs) + '</b></td><td>' + esc(c.start_date || '—') + '</td><td>' + esc(c.schedule || '—') + '</td>' +
           '<td><span class="badge ' + (stCls[c.status] || 'b-closed') + '">' + esc(c.status) + '</span></td>' +
           '<td style="white-space:nowrap"><button class="btn btn-sm btn-ghost" onclick="openCourseModal(\'' + esc(c.id) + '\')">✏️</button> ' +
           '<button class="btn btn-sm btn-danger" onclick="delCourse(\'' + esc(c.id) + '\')">🗑</button></td></tr>';
-      }).join('') + '</tbody>';
+      }).join('') || '<tr><td colspan="11" style="text-align:center; color:var(--muted); padding:30px">دوره‌ای با این فیلترها یافت نشد</td></tr>') + '</tbody>';
+  };
+
+  /** گزینه‌های نام کارگاه (فرم دوره + فیلتر بانک دوره‌ها) — فقط از فهرست کارگاه‌ها */
+  function fillWsSelects() {
+    // فیلتر بانک دوره‌ها
+    var f = $('fCourseWs');
+    if (f) {
+      var fv = f.value;
+      f.innerHTML = '<option value="">همه کارگاه‌ها</option>';
+      WS.forEach(function (w) {
+        var o = document.createElement('option'); o.value = w.title; o.textContent = w.title; f.appendChild(o);
+      });
+      f.value = fv;
+    }
+    // فرم دوره
+    var sel = $('c_workshop');
+    if (sel) {
+      var cv = sel.value;
+      sel.innerHTML = '<option value="">— انتخاب نشده —</option>';
+      WS.forEach(function (w) {
+        var o = document.createElement('option'); o.value = w.title; o.textContent = w.title; sel.appendChild(o);
+      });
+      sel.value = cv;
+    }
   }
 
   window.openCourseModal = function (id) {
@@ -401,6 +517,16 @@
     $('c_cost').value = c ? (c.cost || '') : '';
     $('c_hours').value = c ? (c.hours || '') : '';
     $('c_duration').value = c ? (c.duration || '') : '';
+    $('c_instructor').value = c ? (c.instructor || '') : '';
+    fillWsSelects(); // فهرست کارگاه‌ها از برگه Workshops
+    $('c_workshop').value = c ? (c.workshop || '') : '';
+    // اگر کارگاه دوره قدیمی دیگر در فهرست نیست، حفظ شود که ناخواسته پاک نشود
+    if (c && c.workshop && !$('c_workshop').value) {
+      var o = document.createElement('option'); o.value = c.workshop; o.textContent = c.workshop + ' (خارج از فهرست)';
+      $('c_workshop').appendChild(o); $('c_workshop').value = c.workshop;
+    }
+    $('c_show_instructor').checked = c ? !!c.show_instructor : false;
+    $('c_show_workshop').checked = c ? !!c.show_workshop : false;
     $('courseAlert').className = 'alert alert-err';
     refreshCatList(); // پیشنهاد گروه‌های موجود هنگام تایپ
     $('courseModal').classList.add('show');
@@ -410,7 +536,11 @@
     var course = {
       id: $('c_id').value || null, title: $('c_title').value, category: $('c_category').value,
       capacity: $('c_capacity').value, start_date: $('c_start_date').value,
-      schedule: $('c_schedule').value, status: $('c_status').value, description: $('c_description').value, gender: $('c_gender').value, cost: $('c_cost').value, hours: $('c_hours').value, duration: $('c_duration').value
+      schedule: $('c_schedule').value, status: $('c_status').value, description: $('c_description').value,
+      gender: $('c_gender').value, cost: $('c_cost').value, hours: $('c_hours').value, duration: $('c_duration').value,
+      instructor: $('c_instructor').value, workshop: $('c_workshop').value,
+      show_instructor: $('c_show_instructor').checked ? 'بله' : '',
+      show_workshop: $('c_show_workshop').checked ? 'بله' : ''
     };
     api('saveCourse', { course: course }).then(function (r) {
       if (!r.ok) { showErr('courseAlert', r.error); return; }
@@ -427,10 +557,177 @@
     });
   };
 
+  /* ================= کارگاه‌ها (نسخه ۳) ================= */
+
+  /** بارگذاری فهرست کارگاه‌ها + گزارش جدولی و نموداری (فقط دوره‌های باز در نمودار) */
+  window.loadWorkshops = function () {
+    api('getWorkshops').then(function (r) {
+      if (!r.ok) return;
+      WS = r.rows || [];
+      renderWorkshops();
+      fillWsSelects();
+    });
+    api('workshopReport').then(function (r) {
+      if (!r.ok) return;
+      renderWsReport(r.rows || []);
+    });
+  };
+
+  /** فهرست کارگاه‌ها با ویرایش/حذف — عنوان دقیق، پایه انتخاب در فرم دوره */
+  function renderWorkshops() {
+    $('wsTbl').innerHTML = '<thead><tr><th>عنوان دقیق کارگاه</th><th>تاریخ ثبت</th><th>عملیات</th></tr></thead><tbody>' +
+      (WS.length ? WS.map(function (w) {
+        return '<tr><td style="font-weight:700">🏭 ' + esc(w.title) + '</td>' +
+          '<td style="font-size:12px; color:var(--muted)">' + esc(w.created_at || '—') + '</td>' +
+          '<td style="white-space:nowrap">' +
+          '<button class="btn btn-sm btn-ghost" onclick="editWorkshop(\'' + esc(w.id) + '\')">✏️</button> ' +
+          '<button class="btn btn-sm btn-danger" onclick="delWorkshop(\'' + esc(w.id) + '\')">🗑</button></td></tr>';
+      }).join('') : '<tr><td colspan="3" style="text-align:center; color:var(--muted); padding:30px">کارگاهی ثبت نشده است</td></tr>') + '</tbody>';
+  }
+
+  window.editWorkshop = function (id) {
+    var w = WS.filter(function (x) { return x.id === id; })[0];
+    if (!w) return;
+    var t = prompt('عنوان دقیق کارگاه:', w.title);
+    if (t === null) return;
+    t = t.trim();
+    if (t.length < 3) { alert('عنوان کارگاه را کامل‌تر وارد کنید.'); return; }
+    if (t === w.title) return;
+    api('saveWorkshop', { workshop: { id: id, title: t } }).then(function (r) {
+      if (!r.ok) { showErr('wsAlert', r.error); return; }
+      loadWorkshops();
+    });
+  };
+
+  window.saveWorkshop = function () {
+    var t = $('wsTitle').value.trim();
+    if (t.length < 3) { showErr('wsAlert', 'عنوان کارگاه را کامل‌تر وارد کنید (حداقل ۳ حرف).'); return; }
+    api('saveWorkshop', { workshop: { title: t } }).then(function (r) {
+      if (!r.ok) { showErr('wsAlert', r.error); return; }
+      showOk('wsAlert', 'کارگاه «' + t + '» اضافه شد.');
+      $('wsTitle').value = '';
+      loadWorkshops();
+    });
+  };
+
+  window.delWorkshop = function (id) {
+    var w = WS.filter(function (x) { return x.id === id; })[0];
+    if (!w) return;
+    if (!confirm('کارگاه «' + w.title + '» از فهرست حذف شود؟\n(دوره‌هایی که با این نام ثبت شده‌اند دست نمی‌خورند)')) return;
+    api('deleteWorkshop', { id: id }).then(function (r) {
+      if (!r.ok) { showErr('wsAlert', r.error); return; }
+      loadWorkshops();
+    });
+  };
+
+  /** گزارش جدولی کارگاه‌ها — ظرفیت و ثبت‌نام فقط برای دوره‌های باز شمرده می‌شود */
+  function renderWsReport(rows) {
+    $('wsRepTbl').innerHTML = '<thead><tr><th>کارگاه</th><th>دوره باز</th><th>ظرفیت (باز)</th><th>ثبت‌نام فعال (باز)</th><th>به‌زودی</th><th>بسته</th><th>مانده ظرفیت</th></tr></thead><tbody>' +
+      (rows.length ? rows.map(function (g) {
+        var left = Math.max(0, g.capacity - g.regs);
+        var pct = g.capacity ? Math.min(100, Math.round(g.regs * 100 / g.capacity)) : 0;
+        return '<tr><td style="font-weight:700">🏭 ' + esc(g.label) + '</td>' +
+          '<td><b style="color:var(--primary-dark)">' + faNum(g.open) + '</b></td>' +
+          '<td>' + faNum(g.capacity) + '</td>' +
+          '<td>' + faNum(g.regs) + ' <small style="color:var(--muted)">(' + faNum(pct) + '٪)</small></td>' +
+          '<td>' + faNum(g.soon) + '</td><td>' + faNum(g.closed) + '</td>' +
+          '<td><span class="badge ' + (left > 0 ? 'b-reg' : 'b-closed') + '">' + (left > 0 ? faNum(left) : 'تکمیل') + '</span></td></tr>';
+      }).join('') : '<tr><td colspan="7" style="text-align:center; color:var(--muted); padding:30px">هنوز دوره‌ای با نام کارگاه ثبت نشده است</td></tr>') + '</tbody>';
+    renderWsChart(rows);
+  }
+
+  /** نمودار زیر جدول: مقایسه ظرفیت و ثبت‌نام فعال — فقط دوره‌های باز */
+  function renderWsChart(rows) {
+    var canvas = $('wsChart');
+    if (!canvas || typeof Chart === 'undefined') return;
+    var data = rows.filter(function (g) { return g.capacity > 0 || g.regs > 0; });
+    if (WS_CHART) { WS_CHART.destroy(); WS_CHART = null; }
+    WS_CHART = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: data.map(function (g) { return g.label; }),
+        datasets: [
+          { label: 'ظرفیت (دوره‌های باز)', data: data.map(function (g) { return g.capacity; }), backgroundColor: CHART_COLORS.capacity, borderRadius: 6, maxBarThickness: 26 },
+          { label: 'ثبت‌نام فعال', data: data.map(function (g) { return g.regs; }), backgroundColor: CHART_COLORS.regs, borderRadius: 6, maxBarThickness: 26 }
+        ]
+      },
+      options: {
+        indexAxis: 'y', // عنوان‌های طولانی فارسی — میله‌های افقی خواناتر است
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { beginAtZero: true, ticks: { precision: 0, font: CHART_FONT, callback: function (v) { return faNum(v); } } },
+          y: { ticks: { font: CHART_FONT } }
+        },
+        plugins: {
+          legend: { labels: { font: CHART_FONT } },
+          tooltip: {
+            titleFont: CHART_FONT, bodyFont: CHART_FONT,
+            callbacks: {
+              label: function (ctx) { return ctx.dataset.label + ': ' + faNum(ctx.parsed.x); }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  /** نمودار درخواست‌های دوره (پاپ‌آپ): عنوان دوره درخواستی + تعداد */
+  window.openReqChart = function () {
+    api('requestStats').then(function (r) {
+      if (!r.ok) { showErr('reqsAlert', r.error); return; }
+      var rows = r.rows || [];
+      $('reqChartModal').classList.add('show');
+      var canvas = $('reqChart');
+      if (!canvas || typeof Chart === 'undefined') return;
+      if (!rows.length) {
+        if (REQ_CHART) { REQ_CHART.destroy(); REQ_CHART = null; }
+        var ctx2 = canvas.getContext('2d');
+        ctx2.clearRect(0, 0, canvas.width, canvas.height);
+        ctx2.font = '14px Vazirmatn, Tahoma';
+        ctx2.fillStyle = '#64748b';
+        ctx2.textAlign = 'center';
+        ctx2.fillText('هنوز درخواستی ثبت نشده است', canvas.width / 2, 60);
+        return;
+      }
+      if (REQ_CHART) { REQ_CHART.destroy(); REQ_CHART = null; }
+      REQ_CHART = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: rows.map(function (x) { return x.title; }),
+          datasets: [{
+            label: 'تعداد درخواست',
+            data: rows.map(function (x) { return x.count; }),
+            backgroundColor: CHART_COLORS.req, borderRadius: 6, maxBarThickness: 30
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { beginAtZero: true, ticks: { precision: 0, font: CHART_FONT, callback: function (v) { return faNum(v); } } },
+            y: { ticks: { font: CHART_FONT, autoSkip: false } }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              titleFont: CHART_FONT, bodyFont: CHART_FONT,
+              callbacks: {
+                label: function (ctx) { return 'تعداد درخواست: ' + faNum(ctx.parsed.x); }
+              }
+            }
+          }
+        }
+      });
+    });
+  };
+
   /* ================= درخواست‌های دوره ================= */
   function reqBadge(st) {
     var cls, ic;
     if (st === 'فعلاً بررسی نشده') { cls = 'b-wait'; ic = '⏳'; }
+    else if (st === 'دعوت شده') { cls = 'b-open'; ic = '🎉'; }
     else if (st.indexOf('اسرع وقت') > -1) { cls = 'b-reg'; ic = '✅'; }
     else if (st.indexOf('مربی') > -1) { cls = 'b-soon'; ic = '📅'; }
     else { cls = 'b-withdraw'; ic = '🚫'; }
@@ -483,6 +780,13 @@
     $('rq_status').innerHTML = REQ_STATUSES.map(function (s) {
       return '<option' + (s === r.status ? ' selected' : '') + '>' + esc(s) + '</option>';
     }).join('');
+    // یادآوری هوشمند: «دعوت شده» بدون گروه معنا ندارد — اگر گروه خالی بود، فوکوس شود
+    $('rq_status').onchange = function () {
+      if (this.value === 'دعوت شده' && !$('rq_category').value.trim()) {
+        $('rq_category').focus();
+        $('rq_category').style.borderColor = 'var(--primary)';
+      }
+    };
     $('rq_note').value = r.admin_note || '';
     $('reqReviewAlert').className = 'alert alert-err';
     refreshCatList();
@@ -492,7 +796,12 @@
   window.saveReqReview = function () {
     if (!REQ_DETAIL) return;
     var category = $('rq_category').value.trim();
-    if (category.length < 2) { showErr('reqReviewAlert', 'گروه/دسته دوره را وارد کنید (از لیست یا گروه جدید).'); return; }
+    if (category.length < 2) {
+      showErr('reqReviewAlert', $('rq_status').value === 'دعوت شده' ?
+        'برای وضعیت «دعوت شده» ابتدا گروه/دوره را وارد کنید.' :
+        'گروه/دسته دوره را وارد کنید (از لیست یا گروه جدید).');
+      return;
+    }
     api('setRequest', {
       req_id: REQ_DETAIL.id,
       status: $('rq_status').value,

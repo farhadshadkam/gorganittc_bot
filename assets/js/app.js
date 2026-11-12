@@ -50,9 +50,9 @@
   }
 
   var DEMO_COURSES = [
-    { id: 'C100', title: 'آموزش خیاطی مقدماتی', category: 'خانگی', capacity: 20, registered: 8, start_date: '1404/09/05', schedule: 'شنبه و دوشنبه ۹ تا ۱۱', description: 'آموزش از صفر تا دوخت لباس ساده', gender: 'ویژه بانوان', cost: '۵۰۰ هزار تومان', hours: '۲۴ ساعت', duration: 'حدود ۲ ماه' },
-    { id: 'C101', title: 'مهارت‌های ICDL (رایانه)', category: 'رایانه‌ای', capacity: 15, registered: 11, start_date: '1404/09/10', schedule: 'یکشنبه و سه‌شنبه ۱۶ تا ۱۸', description: 'ویندوز، Word، Excel، اینترنت', gender: 'مشترک', cost: '۸۰۰ هزار تومان', hours: '۴۸ ساعت', duration: 'حدود ۲/۵ ماه' },
-    { id: 'C102', title: 'آشپزی و شیرینی‌پزی', category: 'خانگی', capacity: 12, registered: 4, start_date: '1404/09/15', schedule: 'چهارشنبه ۹ تا ۱۲', description: 'کاربردی با آزمون فنی‌وحرفه‌ای', gender: 'ویژه بانوان', cost: 'رایگان', hours: '۳۰ ساعت', duration: 'حدود ۱ ماه' }
+    { id: 'C100', title: 'آموزش خیاطی مقدماتی', category: 'خانگی', capacity: 20, registered: 8, start_date: '1404/09/05', schedule: 'شنبه و دوشنبه ۹ تا ۱۱', description: 'آموزش از صفر تا دوخت لباس ساده', gender: 'ویژه بانوان', cost: '۵۰۰ هزار تومان', hours: '۲۴ ساعت', duration: 'حدود ۲ ماه', instructor: 'استاد محمدی', workshop: 'کارگاه آموزش خیاطی' },
+    { id: 'C101', title: 'مهارت‌های ICDL (رایانه)', category: 'رایانه‌ای', capacity: 15, registered: 11, start_date: '1404/09/10', schedule: 'یکشنبه و سه‌شنبه ۱۶ تا ۱۸', description: 'ویندوز، Word، Excel، اینترنت', gender: 'مشترک', cost: '۸۰۰ هزار تومان', hours: '۴۸ ساعت', duration: 'حدود ۲/۵ ماه', instructor: 'استاد کریمی', workshop: 'کارگاه ICDL و مهارت‌های رایانه‌ای' },
+    { id: 'C102', title: 'آشپزی و شیرینی‌پزی', category: 'خانگی', capacity: 12, registered: 4, start_date: '1404/09/15', schedule: 'چهارشنبه ۹ تا ۱۲', description: 'کاربردی با آزمون فنی‌وحرفه‌ای', gender: 'ویژه بانوان', cost: 'رایگان', hours: '۳۰ ساعت', duration: 'حدود ۱ ماه', instructor: '', workshop: '' }
   ];
   function demoApi(action) {
     if (action === 'publicInfo')
@@ -117,6 +117,9 @@
         (c.gender ? '<span class="badge b-gen">👥 ' + esc(c.gender) + '</span>' : '') + '</div>' +
         '<h3>' + esc(c.title) + '</h3>' +
         '<div class="meta">' +
+        // نسخه ۳: نام مدرس/کارگاه فقط وقتی ادمین کلید «نمایش در اطلاع‌رسانی» را زده باشد (سرور خالی نمی‌فرستد)
+        (c.workshop ? '<div>🏭 کارگاه: ' + esc(c.workshop) + '</div>' : '') +
+        (c.instructor ? '<div>🎓 مدرس: ' + esc(c.instructor) + '</div>' : '') +
         (c.start_date ? '<div>📅 شروع: ' + esc(c.start_date) + '</div>' : '') +
         (c.schedule ? '<div>⏰ ' + esc(c.schedule) + '</div>' : '') +
         (dur ? '<div>⏱ مدت: ' + esc(dur) + '</div>' : '') +
@@ -470,6 +473,7 @@
   /* ================= پیگیری درخواست‌ها ================= */
   function reqBadgeCls(st) {
     if (st === 'فعلاً بررسی نشده') return 'b-wait';
+    if (st === 'دعوت شده') return 'b-open';
     if (st.indexOf('اسرع وقت') > -1) return 'b-reg';
     if (st.indexOf('مربی') > -1) return 'b-soon';
     return 'b-withdraw';
@@ -518,6 +522,7 @@
           return '<div class="follow-item"><b>' + esc(x.title) + '</b>' +
             (x.category ? ' <span class="badge b-open">' + esc(x.category) + '</span>' : '') +
             '<br><span class="badge ' + reqBadgeCls(x.status) + '">' + esc(x.status) + '</span>' +
+            (x.status === 'دعوت شده' ? '<br><small style="color:#065f46">🎉 برای ثبت‌نام نهایی و اطلاع از زمان و مکان کلاس، با مرکز تماس بگیرید.</small>' : '') +
             '<br><small style="color:var(--muted)">ثبت: ' + esc(x.created_at) +
             (x.updated_at && x.updated_at !== x.created_at ? ' | آخرین بررسی: ' + esc(x.updated_at) : '') +
             ' | کد پیگیری: ' + esc(x.id) + '</small></div>';
